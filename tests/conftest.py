@@ -9,13 +9,12 @@ from app.db.base import Base
 from app.db.session import get_db
 from main import app
 
-# 테스트용 데이터베이스 URL
-TEST_DATABASE_URL = "sqlite:///:memory:"
+# 테스트용 데이터베이스 URL (PostgreSQL py_monitor 스키마 사용)
+TEST_DATABASE_URL = settings.SQLALCHEMY_DATABASE_URI
 
 # 테스트용 엔진 생성
 engine = create_engine(
     TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -31,7 +30,7 @@ def db():
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # 테스트 후 테이블 삭제는 하지 않음 (실제 DB 사용)
 
 @pytest.fixture(scope="function")
 def client(db):
