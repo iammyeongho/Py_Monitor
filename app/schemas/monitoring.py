@@ -12,6 +12,7 @@
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
+from enum import Enum
 
 # 모니터링 로그 스키마
 class MonitoringLogBase(BaseModel):
@@ -111,3 +112,9 @@ class MonitoringCheckResponse(BaseModel):
     http_code: Optional[int] = None
     error_message: Optional[str] = None
     checked_at: datetime
+
+# 모니터링 상태 Enum
+class MonitoringStatus(str, Enum):
+    UP = "up"
+    DOWN = "down"
+    UNKNOWN = "unknown"
