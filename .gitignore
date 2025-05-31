@@ -25,4 +25,7 @@ ENV/
 frontend/node_modules/
 
 # 기타
-*.log 
+*.log
+
+# logs
+logs/ 
