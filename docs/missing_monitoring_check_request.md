@@ -100,4 +100,32 @@ class MonitoringStatus(str, Enum):
 
 ---
 
+## SSLStatus Enum 누락 및 추가 내역
+
+### 개요
+- `SSLStatus`는 SSL 인증서의 상태(VALID, EXPIRED, UNKNOWN 등)를 명확하게 표현하기 위한 Enum 클래스입니다.
+- 기존 `app/schemas/monitoring.py`에 정의가 누락되어, 관련 엔드포인트 및 테스트에서 ImportError가 발생했습니다.
+
+### 영향
+- FastAPI 엔드포인트 및 테스트 코드에서 `from app.schemas.monitoring import SSLStatus` 구문이 실패하여 서비스 및 테스트가 정상 동작하지 않음
+
+### 해결 방법
+- 아래와 같이 `SSLStatus` Enum 클래스를 추가함
+
+```python
+class SSLStatus(str, Enum):
+    VALID = "valid"
+    EXPIRED = "expired"
+    UNKNOWN = "unknown"
+```
+
+### 예시
+```json
+{
+  "ssl_status": "valid"
+}
+```
+
+---
+
 > 이 문서는 스키마 누락으로 인한 장애 및 구조적 개선 사항을 추적하기 위해 작성되었습니다.

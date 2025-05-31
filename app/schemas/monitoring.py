@@ -118,3 +118,9 @@ class MonitoringStatus(str, Enum):
     UP = "up"
     DOWN = "down"
     UNKNOWN = "unknown"
+
+# SSL 상태 Enum
+class SSLStatus(str, Enum):
+    VALID = "valid"
+    EXPIRED = "expired"
+    UNKNOWN = "unknown"
