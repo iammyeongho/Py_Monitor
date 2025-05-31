@@ -101,3 +101,13 @@ class MonitoringCheckRequest(BaseModel):
     headers: Optional[dict] = None
     body: Optional[dict] = None
     timeout: Optional[int] = 30
+
+# 모니터링 체크 응답 스키마
+class MonitoringCheckResponse(BaseModel):
+    project_id: int
+    url: str
+    status: bool
+    response_time: Optional[float] = None
+    http_code: Optional[int] = None
+    error_message: Optional[str] = None
+    checked_at: datetime
