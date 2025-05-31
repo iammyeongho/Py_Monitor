@@ -128,4 +128,24 @@ class SSLStatus(str, Enum):
 
 ---
 
+## monitoring_service.py 더미 클래스 추가 내역
+
+### 개요
+- `app/services/monitoring_service.py` 파일이 존재하지 않아 ImportError가 발생함
+- 테스트 및 앱 구동을 위해 더미 클래스를 임시로 추가함
+
+### 영향
+- FastAPI 엔드포인트 및 테스트 코드에서 `from app.services.monitoring_service import MonitoringService` 구문이 실패하여 서비스 및 테스트가 정상 동작하지 않음
+
+### 해결 방법
+- 아래와 같이 더미 클래스를 추가함 (실제 로직은 추후 구현 필요)
+
+```python
+class MonitoringService:
+    """모니터링 서비스 로직 더미 클래스 (실제 구현 필요)"""
+    pass
+```
+
+---
+
 > 이 문서는 스키마 누락으로 인한 장애 및 구조적 개선 사항을 추적하기 위해 작성되었습니다.
