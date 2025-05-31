@@ -92,3 +92,12 @@ class SSLDomainStatusResponse(SSLDomainStatusBase):
 
     class Config:
         from_attributes = True
+
+# 모니터링 체크 요청 스키마
+class MonitoringCheckRequest(BaseModel):
+    project_id: int
+    url: str
+    method: str = "GET"
+    headers: Optional[dict] = None
+    body: Optional[dict] = None
+    timeout: Optional[int] = 30
