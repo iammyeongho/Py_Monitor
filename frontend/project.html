@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로젝트 등록 | PyMonitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>프로젝트 등록</h1>
+    <form id="project-form">
+      <input type="text" id="title" placeholder="프로젝트명" required>
+      <input type="text" id="host-name" placeholder="호스트명 (예: example.com)" required>
+      <input type="text" id="ip-address" placeholder="IP 주소 (예: 192.168.0.1)" required>
+      <input type="url" id="url" placeholder="URL (예: https://example.com)" required>
+      <button type="button" id="open-setting">모니터링 주기 설정</button>
+      <button type="submit">저장</button>
+    </form>
+    <a href="index.html" class="link">대시보드로 돌아가기</a>
+  </div>
+  <!-- 모니터링 주기 설정 팝업 -->
+  <div class="modal" id="setting-modal" style="display:none;">
+    <div class="modal-content">
+      <h3>모니터링 주기 설정</h3>
+      <form id="setting-form">
+        <input type="number" id="check-interval" placeholder="체크 주기(초)" min="10" required>
+        <input type="number" id="timeout" placeholder="타임아웃(초)" min="1" required>
+        <input type="number" id="retry-count" placeholder="재시도 횟수" min="0" required>
+        <input type="number" id="alert-threshold" placeholder="알림 임계값" min="1" required>
+        <button type="submit">저장</button>
+        <button type="button" id="close-modal" style="background:#eee;color:#333;margin-top:8px;">닫기</button>
+      </form>
+    </div>
+  </div>
+  <script src="monitoring.js"></script>
+</body>
+</html>

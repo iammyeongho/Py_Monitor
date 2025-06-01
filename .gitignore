@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtualenv
+.venv/
+venv/
+ENV/
+
+# pytest
+.pytest_cache/
+
+# 환경 변수
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# node
+frontend/node_modules/
+
+# 기타
+*.log
+
+# logs
+logs/ 

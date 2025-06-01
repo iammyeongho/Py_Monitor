@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대시보드 | PyMonitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div style="max-width:1200px;margin:0 auto;padding:24px 0;display:flex;justify-content:space-between;align-items:center;">
+    <h2>모니터링 대시보드</h2>
+    <a href="project.html"><button>+ 프로젝트 등록</button></a>
+  </div>
+  <div class="dashboard" id="dashboard">
+    <!-- JS로 프로젝트 카드가 렌더링됩니다. -->
+  </div>
+
+  <!-- 모니터링 주기 설정 팝업 -->
+  <div class="modal" id="setting-modal" style="display:none;">
+    <div class="modal-content">
+      <h3>모니터링 주기 설정</h3>
+      <form id="setting-form">
+        <input type="number" id="check-interval" placeholder="체크 주기(초)" min="10" required>
+        <input type="number" id="timeout" placeholder="타임아웃(초)" min="1" required>
+        <input type="number" id="retry-count" placeholder="재시도 횟수" min="0" required>
+        <input type="number" id="alert-threshold" placeholder="알림 임계값" min="1" required>
+        <button type="submit">저장</button>
+        <button type="button" id="close-modal" style="background:#eee;color:#333;margin-top:8px;">닫기</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 상세 정보 팝업 -->
+  <div id="detail-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2 id="detail-title"></h2>
+      
+      <!-- 기본 정보 -->
+      <div class="detail-section">
+        <div class="detail-label">URL</div>
+        <div class="detail-value" id="detail-url"></div>
+      </div>
+
+      <!-- SSL 정보 -->
+      <div class="detail-section">
+        <div class="detail-label">SSL 상태</div>
+        <div class="detail-value" id="detail-ssl-status"></div>
+        <div class="detail-label">SSL 만료일</div>
+        <div class="detail-value" id="detail-ssl-expiry"></div>
+      </div>
+
+      <!-- 도메인 정보 -->
+      <div class="detail-section">
+        <div class="detail-label">도메인 만료일</div>
+        <div class="detail-value" id="detail-domain-expiry"></div>
+      </div>
+
+      <!-- JS 매트릭 -->
+      <div class="detail-section">
+        <div class="detail-label">JS 매트릭 점수</div>
+        <div class="detail-value" id="detail-js-metrics"></div>
+      </div>
+
+      <!-- 모니터링 설정 -->
+      <div class="detail-section">
+        <div class="detail-label">모니터링 설정</div>
+        <form id="detail-setting-form" class="setting-form">
+          <!-- 기본 모니터링 설정 -->
+          <div class="setting-group">
+            <h4>기본 설정</h4>
+            <div class="form-group">
+              <label>체크 주기 (초)</label>
+              <input type="number" id="detail-check-interval" min="10" required>
+            </div>
+            <div class="form-group">
+              <label>타임아웃 (초)</label>
+              <input type="number" id="detail-timeout" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>재시도 횟수</label>
+              <input type="number" id="detail-retry-count" min="0" required>
+            </div>
+          </div>
+
+          <!-- 응답 속도 설정 -->
+          <div class="setting-group">
+            <h4>응답 속도 설정</h4>
+            <div class="form-group">
+              <label>응답 속도 제한 (초)</label>
+              <input type="number" id="detail-response-limit" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>제한 초과 시 알림 주기 (분)</label>
+              <input type="number" id="detail-response-alert-interval" min="1" required>
+            </div>
+          </div>
+
+          <!-- 알림 설정 -->
+          <div class="setting-group">
+            <h4>알림 설정</h4>
+            <div class="form-group">
+              <label>HTTP 오류 알림 주기 (분)</label>
+              <input type="number" id="detail-error-alert-interval" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>만료일 D-day 알림</label>
+              <input type="number" id="detail-expiry-dday" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>만료일 알림 주기 (일)</label>
+              <input type="number" id="detail-expiry-alert-interval" min="1" required>
+            </div>
+          </div>
+
+          <button type="submit" class="save-btn">설정 저장</button>
+        </form>
+      </div>
+
+      <button type="button" id="close-detail-modal" class="close-btn">닫기</button>
+    </div>
+  </div>
+
+  <script src="monitoring.js"></script>
+</body>
+</html>
