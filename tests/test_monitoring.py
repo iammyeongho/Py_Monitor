@@ -17,12 +17,17 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 import asyncio
 import ssl
+from fastapi.testclient import TestClient
+from app.main import app
+from app.models.project import Project
+from app.db.session import SessionLocal
 
 from app.models.user import User
-from app.models.project import Project
 from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSetting
 from app.schemas.monitoring import MonitoringStatus
 from app.services.monitoring import MonitoringService
+
+client = TestClient(app)
 
 @pytest.fixture
 def test_project(db: Session):
@@ -278,3 +283,174 @@ async def test_monitoring_task(monitoring_service, mock_project):
         mock_status.assert_called()
         mock_ssl.assert_called()
         mock_alert.assert_not_called()  # 정상 상태이므로 알림이 생성되지 않아야 함 
+
+def get_test_token():
+    """테스트용 토큰 획득"""
+    # 사용자 생성
+    client.post(
+        "/api/v1/users/",
+        json={
+            "email": "monitoring_test@example.com",
+            "password": "testpassword123",
+            "full_name": "Monitoring Test User"
+        }
+    )
+    
+    # 로그인
+    response = client.post(
+        "/api/v1/users/login",
+        data={
+            "username": "monitoring_test@example.com",
+            "password": "testpassword123"
+        }
+    )
+    return response.json()["access_token"]
+
+def create_test_project(token: str) -> int:
+    """테스트용 프로젝트 생성"""
+    response = client.post(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Monitoring Test Project",
+            "url": "https://example.com",
+            "host_name": "example.com",
+            "ip_address": "93.184.216.34",
+            "status_interval": 300,
+            "expiry_d_day": 30,
+            "expiry_interval": 7,
+            "time_limit": 5,
+            "time_limit_interval": 15
+        }
+    )
+    return response.json()["id"]
+
+def test_check_project_status():
+    """프로젝트 상태 확인 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.get(
+        f"/api/v1/monitoring/status/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "project_id" in data
+    assert "status" in data
+    assert "ssl" in data
+    assert "checked_at" in data
+
+def test_get_monitoring_logs():
+    """모니터링 로그 조회 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.get(
+        f"/api/v1/monitoring/logs/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+def test_get_monitoring_alerts():
+    """모니터링 알림 조회 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.get(
+        f"/api/v1/monitoring/alerts/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+
+def test_update_alert_status():
+    """알림 상태 업데이트 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    # 먼저 알림 생성
+    alert_response = client.post(
+        f"/api/v1/monitoring/alerts/{project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "alert_type": "test_alert",
+            "message": "Test alert message"
+        }
+    )
+    alert_id = alert_response.json()["id"]
+    
+    # 알림 상태 업데이트
+    response = client.put(
+        f"/api/v1/monitoring/alerts/{alert_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"is_resolved": True}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_resolved"] == True
+
+def test_get_monitoring_settings():
+    """모니터링 설정 조회 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.get(
+        f"/api/v1/monitoring/settings/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "check_interval" in data
+    assert "timeout" in data
+    assert "retry_count" in data
+    assert "alert_threshold" in data
+
+def test_update_monitoring_settings():
+    """모니터링 설정 업데이트 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.put(
+        f"/api/v1/monitoring/settings/{project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "check_interval": 600,
+            "timeout": 60,
+            "retry_count": 5,
+            "alert_threshold": 5
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["check_interval"] == 600
+    assert data["timeout"] == 60
+    assert data["retry_count"] == 5
+    assert data["alert_threshold"] == 5
+
+def test_start_monitoring():
+    """모니터링 시작 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.post(
+        f"/api/v1/monitoring/projects/{project_id}/monitoring/start",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Monitoring started"
+
+def test_stop_monitoring():
+    """모니터링 중지 테스트"""
+    token = get_test_token()
+    project_id = create_test_project(token)
+    
+    response = client.post(
+        f"/api/v1/monitoring/projects/{project_id}/monitoring/stop",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Monitoring stopped" 

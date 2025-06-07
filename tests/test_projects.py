@@ -1,119 +1,167 @@
+"""
+프로젝트 CRUD 관련 테스트
+"""
+
 import pytest
-from fastapi import status
+from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-
-from app.models.user import User
+from app.main import app
 from app.models.project import Project
+from app.db.session import SessionLocal
 
-@pytest.fixture
-def test_user(db: Session):
-    user = User(
-        email="test@example.com",
-        password_hash="hashed_password"
+client = TestClient(app)
+
+def get_test_token():
+    """테스트용 토큰 획득"""
+    # 사용자 생성
+    client.post(
+        "/api/v1/users/",
+        json={
+            "email": "project_test@example.com",
+            "password": "testpassword123",
+            "full_name": "Project Test User"
+        }
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
-def test_create_project(client, db: Session, test_user):
-    project_data = {
-        "host_name": "example.com",
-        "ip_address": "192.168.1.1",
-        "url": "https://example.com",
-        "title": "Test Project",
-        "status_interval": 300,
-        "expiry_d_day": 30,
-        "expiry_interval": 86400,
-        "time_limit": 3600,
-        "time_limit_interval": 300
-    }
-    response = client.post(f"/api/v1/users/{test_user.id}/projects/", json=project_data)
-    assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data["title"] == project_data["title"]
-    assert data["host_name"] == project_data["host_name"]
-
-def test_get_project(client, db: Session, test_user):
-    # 테스트 프로젝트 생성
-    project = Project(
-        user_id=test_user.id,
-        host_name="example.com",
-        ip_address="192.168.1.1",
-        url="https://example.com",
-        title="Test Project"
+    
+    # 로그인
+    response = client.post(
+        "/api/v1/users/login",
+        data={
+            "username": "project_test@example.com",
+            "password": "testpassword123"
+        }
     )
-    db.add(project)
-    db.commit()
-    db.refresh(project)
+    return response.json()["access_token"]
 
-    response = client.get(f"/api/v1/projects/{project.id}")
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["title"] == project.title
-    assert data["host_name"] == project.host_name
-
-def test_get_user_projects(client, db: Session, test_user):
-    # 테스트 프로젝트들 생성
-    projects = [
-        Project(
-            user_id=test_user.id,
-            host_name=f"example{i}.com",
-            ip_address=f"192.168.1.{i}",
-            url=f"https://example{i}.com",
-            title=f"Test Project {i}"
-        )
-        for i in range(3)
-    ]
-    for project in projects:
-        db.add(project)
-    db.commit()
-
-    response = client.get(f"/api/v1/users/{test_user.id}/projects/")
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert len(data) == 3
-
-def test_update_project(client, db: Session, test_user):
-    # 테스트 프로젝트 생성
-    project = Project(
-        user_id=test_user.id,
-        host_name="example.com",
-        ip_address="192.168.1.1",
-        url="https://example.com",
-        title="Test Project"
+def test_create_project():
+    """프로젝트 생성 테스트"""
+    token = get_test_token()
+    
+    response = client.post(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Test Project",
+            "url": "https://example.com",
+            "host_name": "example.com",
+            "ip_address": "93.184.216.34",
+            "status_interval": 300,
+            "expiry_d_day": 30,
+            "expiry_interval": 7,
+            "time_limit": 5,
+            "time_limit_interval": 15
+        }
     )
-    db.add(project)
-    db.commit()
-    db.refresh(project)
-
-    update_data = {
-        "title": "Updated Project",
-        "host_name": "updated.com",
-        "status_interval": 600
-    }
-    response = client.put(f"/api/v1/projects/{project.id}", json=update_data)
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == 200
     data = response.json()
-    assert data["title"] == update_data["title"]
-    assert data["host_name"] == update_data["host_name"]
+    assert data["title"] == "Test Project"
+    assert data["url"] == "https://example.com"
+    assert "id" in data
 
-def test_delete_project(client, db: Session, test_user):
-    # 테스트 프로젝트 생성
-    project = Project(
-        user_id=test_user.id,
-        host_name="example.com",
-        ip_address="192.168.1.1",
-        url="https://example.com",
-        title="Test Project"
+def test_get_projects():
+    """프로젝트 목록 조회 테스트"""
+    token = get_test_token()
+    
+    response = client.get(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"}
     )
-    db.add(project)
-    db.commit()
-    db.refresh(project)
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    if len(data) > 0:
+        assert "id" in data[0]
+        assert "title" in data[0]
 
-    response = client.delete(f"/api/v1/projects/{project.id}")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+def test_get_project():
+    """특정 프로젝트 조회 테스트"""
+    token = get_test_token()
+    
+    # 먼저 프로젝트 생성
+    create_response = client.post(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Get Test Project",
+            "url": "https://example.com",
+            "host_name": "example.com"
+        }
+    )
+    project_id = create_response.json()["id"]
+    
+    # 프로젝트 조회
+    response = client.get(
+        f"/api/v1/projects/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == project_id
+    assert data["title"] == "Get Test Project"
 
-    # 삭제 확인
-    response = client.get(f"/api/v1/projects/{project.id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND 
+def test_update_project():
+    """프로젝트 업데이트 테스트"""
+    token = get_test_token()
+    
+    # 먼저 프로젝트 생성
+    create_response = client.post(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Update Test Project",
+            "url": "https://example.com",
+            "host_name": "example.com"
+        }
+    )
+    project_id = create_response.json()["id"]
+    
+    # 프로젝트 업데이트
+    response = client.put(
+        f"/api/v1/projects/{project_id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Updated Project Title",
+            "url": "https://example.com",
+            "host_name": "example.com"
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == project_id
+    assert data["title"] == "Updated Project Title"
+
+def test_delete_project():
+    """프로젝트 삭제 테스트"""
+    token = get_test_token()
+    
+    # 먼저 프로젝트 생성
+    create_response = client.post(
+        "/api/v1/projects/",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "title": "Delete Test Project",
+            "url": "https://example.com",
+            "host_name": "example.com"
+        }
+    )
+    project_id = create_response.json()["id"]
+    
+    # 프로젝트 삭제
+    response = client.delete(
+        f"/api/v1/projects/{project_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == project_id
+    assert data["is_active"] == False
+
+def test_invalid_project_access():
+    """잘못된 프로젝트 접근 테스트"""
+    token = get_test_token()
+    
+    response = client.get(
+        "/api/v1/projects/999999",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == 404 

@@ -10,7 +10,7 @@
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, projects, monitoring
+from app.api.v1.endpoints import users, projects, monitoring, notifications
 
 api_router = APIRouter()
 
@@ -33,4 +33,11 @@ api_router.include_router(
     monitoring.router,
     prefix="/monitoring",
     tags=["monitoring"]
+)
+
+# 알림 관련 엔드포인트
+api_router.include_router(
+    notifications.router,
+    prefix="/notifications",
+    tags=["notifications"]
 ) 
