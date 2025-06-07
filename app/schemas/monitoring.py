@@ -1,12 +1,12 @@
 """
 # Laravel 개발자를 위한 설명
-# 이 파일은 모니터링 관련 데이터 스키마를 정의합니다.
-# Laravel의 Request/Resource 클래스와 유사한 역할을 합니다.
+# 이 파일은 Laravel의 Monitoring 모델과 유사한 역할을 합니다.
+# Pydantic을 사용하여 모니터링 관련 스키마를 정의합니다.
 # 
-# 주요 기능:
-# 1. 요청 데이터 검증
-# 2. 응답 데이터 구조화
-# 3. 데이터 변환
+# Laravel과의 주요 차이점:
+# 1. BaseModel = Laravel의 Model과 유사
+# 2. Field = Laravel의 $fillable과 유사
+# 3. Config = Laravel의 $casts와 유사
 """
 
 from typing import Optional
@@ -113,14 +113,29 @@ class MonitoringCheckResponse(BaseModel):
     error_message: Optional[str] = None
     checked_at: datetime
 
-# 모니터링 상태 Enum
-class MonitoringStatus(str, Enum):
-    UP = "up"
-    DOWN = "down"
-    UNKNOWN = "unknown"
+# SSL 상태 스키마
+class SSLStatus(BaseModel):
+    """SSL 상태 스키마"""
+    is_valid: bool
+    issuer: Optional[str] = None
+    valid_from: Optional[datetime] = None
+    valid_until: Optional[datetime] = None
+    days_remaining: Optional[int] = None
 
-# SSL 상태 Enum
-class SSLStatus(str, Enum):
-    VALID = "valid"
-    EXPIRED = "expired"
-    UNKNOWN = "unknown"
+# 모니터링 상태 스키마
+class MonitoringStatus(BaseModel):
+    """모니터링 상태 스키마"""
+    is_up: bool
+    response_time: Optional[float] = None
+    status_code: Optional[int] = None
+    error_message: Optional[str] = None
+
+# 모니터링 응답 스키마
+class MonitoringResponse(BaseModel):
+    """모니터링 응답 스키마"""
+    project_id: int
+    project_title: str
+    url: str
+    status: MonitoringStatus
+    ssl: Optional[SSLStatus] = None
+    checked_at: datetime = Field(default_factory=datetime.now)

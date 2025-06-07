@@ -26,9 +26,34 @@ from app.schemas.monitoring import (
     SSLDomainStatusResponse
 )
 from app.services.monitoring import MonitoringService
-from app.core.scheduler import scheduler
+from app.services.scheduler import scheduler
+from datetime import datetime, timedelta
 
 router = APIRouter()
+
+@router.get("/projects", response_model=List[dict])
+async def get_projects(
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """프로젝트 목록을 조회합니다."""
+    projects = db.query(Project).filter(Project.user_id == current_user.id).all()
+    return [
+        {
+            "id": project.id,
+            "title": project.title,
+            "url": project.url,
+            "status": project.status,
+            "status_text": project.status_text,
+            "interval": project.check_interval,
+            "snapshot_path": project.snapshot_path,
+            "ssl_status": project.ssl_status,
+            "ssl_expiry": project.ssl_expiry,
+            "domain_expiry": project.domain_expiry,
+            "js_metrics": project.js_metrics
+        }
+        for project in projects
+    ]
 
 @router.get("/projects/{project_id}/status", response_model=MonitoringLogResponse)
 async def get_project_status(
@@ -233,4 +258,138 @@ async def stop_monitoring(
         raise HTTPException(status_code=404, detail="Project not found")
     
     await scheduler.stop_monitoring(project_id)
-    return {"message": "Monitoring stopped"} 
+    return {"message": "Monitoring stopped"}
+
+@router.get("/logs/{project_id}", response_model=List[MonitoringLogResponse])
+async def get_monitoring_logs(
+    project_id: int,
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """프로젝트의 모니터링 로그를 조회합니다."""
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    logs = db.query(MonitoringLog).filter(
+        MonitoringLog.project_id == project_id
+    ).order_by(MonitoringLog.created_at.desc()).limit(limit).all()
+    
+    return logs
+
+@router.get("/alerts/{project_id}", response_model=List[MonitoringAlertResponse])
+async def get_monitoring_alerts(
+    project_id: int,
+    is_resolved: Optional[bool] = None,
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """프로젝트의 모니터링 알림을 조회합니다."""
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    query = db.query(MonitoringAlert).filter(MonitoringAlert.project_id == project_id)
+    if is_resolved is not None:
+        query = query.filter(MonitoringAlert.is_resolved == is_resolved)
+    
+    alerts = query.order_by(MonitoringAlert.created_at.desc()).limit(limit).all()
+    return alerts
+
+@router.put("/alerts/{alert_id}")
+async def update_alert_status(
+    alert_id: int,
+    is_resolved: bool,
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """알림 상태를 업데이트합니다."""
+    alert = db.query(MonitoringAlert).join(Project).filter(
+        MonitoringAlert.id == alert_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    alert.is_resolved = is_resolved
+    alert.resolved_at = datetime.now() if is_resolved else None
+    db.commit()
+    
+    return {"message": "Alert status updated successfully"}
+
+@router.get("/settings/{project_id}", response_model=MonitoringSettingResponse)
+async def get_monitoring_settings(
+    project_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """프로젝트의 모니터링 설정을 조회합니다."""
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    settings = db.query(MonitoringSetting)\
+        .filter(MonitoringSetting.project_id == project_id)\
+        .first()
+    
+    if not settings:
+        # 기본 설정 생성
+        settings = MonitoringSetting(
+            project_id=project_id,
+            check_interval=300,  # 5분
+            timeout=30,
+            retry_count=3,
+            alert_threshold=3,
+            response_limit=5,
+            response_alert_interval=30,
+            error_alert_interval=15,
+            expiry_dday=30,
+            expiry_alert_interval=7
+        )
+        db.add(settings)
+        db.commit()
+        db.refresh(settings)
+    
+    return settings
+
+@router.put("/settings/{project_id}", response_model=MonitoringSettingResponse)
+async def update_monitoring_settings(
+    project_id: int,
+    settings_update: MonitoringSettingUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user = Depends(deps.get_current_user)
+):
+    """프로젝트의 모니터링 설정을 업데이트합니다."""
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.user_id == current_user.id
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    settings = db.query(MonitoringSetting)\
+        .filter(MonitoringSetting.project_id == project_id)\
+        .first()
+    
+    if not settings:
+        settings = MonitoringSetting(project_id=project_id)
+        db.add(settings)
+    
+    for key, value in settings_update.dict(exclude_unset=True).items():
+        setattr(settings, key, value)
+    
+    db.commit()
+    db.refresh(settings)
+    
+    return settings 

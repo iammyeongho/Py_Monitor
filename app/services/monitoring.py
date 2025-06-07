@@ -1,13 +1,12 @@
 """
 # Laravel 개발자를 위한 설명
-# 이 파일은 모니터링 서비스를 구현합니다.
-# Laravel의 Service 클래스와 유사한 역할을 합니다.
+# 이 파일은 Laravel의 MonitoringService와 유사한 역할을 합니다.
+# FastAPI를 사용하여 모니터링 서비스를 정의합니다.
 # 
-# 주요 기능:
-# 1. 프로젝트 상태 확인
-# 2. SSL 인증서 확인
-# 3. 도메인 만료일 확인
-# 4. 알림 생성
+# Laravel과의 주요 차이점:
+# 1. async/await = Laravel의 비동기 처리와 유사
+# 2. aiohttp = Laravel의 HTTP 클라이언트와 유사
+# 3. ssl = Laravel의 SSL 검증과 유사
 """
 
 from sqlalchemy.orm import Session
@@ -18,7 +17,9 @@ from app.schemas.monitoring import (
     MonitoringSettingCreate,
     MonitoringSettingUpdate,
     SSLDomainStatusCreate,
-    MonitoringStatus
+    MonitoringStatus,
+    SSLStatus,
+    MonitoringResponse
 )
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
@@ -36,6 +37,7 @@ from app.core.config import settings
 from app.utils.notifications import NotificationService
 from sqlalchemy import and_
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -406,4 +408,68 @@ class MonitoringService:
         """프로젝트 모니터링 중지"""
         if project_id in self._monitoring_tasks:
             self._monitoring_tasks[project_id].cancel()
-            del self._monitoring_tasks[project_id] 
+            del self._monitoring_tasks[project_id]
+
+async def check_website(url: str, timeout: int = 30) -> MonitoringStatus:
+    """웹사이트 상태를 확인합니다."""
+    start_time = datetime.now()
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=timeout) as response:
+                response_time = (datetime.now() - start_time).total_seconds()
+                return MonitoringStatus(
+                    is_up=True,
+                    response_time=response_time,
+                    status_code=response.status
+                )
+    except Exception as e:
+        return MonitoringStatus(
+            is_up=False,
+            error_message=str(e)
+        )
+
+def check_ssl(hostname: str) -> SSLStatus:
+    """SSL 인증서 상태를 확인합니다."""
+    try:
+        context = ssl.create_default_context()
+        with socket.create_connection((hostname, 443)) as sock:
+            with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                cert = ssock.getpeercert()
+                issuer = dict(x[0] for x in cert['issuer'])
+                not_before = datetime.strptime(cert['notBefore'], '%b %d %H:%M:%S %Y %Z')
+                not_after = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
+                days_remaining = (not_after - datetime.now()).days
+                return SSLStatus(
+                    is_valid=True,
+                    issuer=issuer.get('organizationName'),
+                    valid_from=not_before,
+                    valid_until=not_after,
+                    days_remaining=days_remaining
+                )
+    except Exception as e:
+        return SSLStatus(
+            is_valid=False,
+            error_message=str(e)
+        )
+
+def check_project_status(project: Project) -> MonitoringResponse:
+    """프로젝트의 상태를 확인합니다."""
+    # URL에서 호스트네임 추출
+    parsed_url = urlparse(str(project.url))
+    hostname = parsed_url.netloc
+
+    # 웹사이트 상태 체크
+    status = check_website(project.url)
+
+    # SSL 체크 (HTTPS인 경우)
+    ssl_status = None
+    if parsed_url.scheme == 'https':
+        ssl_status = check_ssl(hostname)
+
+    return MonitoringResponse(
+        project_id=project.id,
+        project_title=project.title,
+        url=str(project.url),
+        status=status,
+        ssl=ssl_status
+    ) 

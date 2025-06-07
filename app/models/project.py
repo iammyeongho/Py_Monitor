@@ -11,7 +11,7 @@
 
 from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.orm import relationship
-from app.db.session import Base
+from app.db.base_class import Base
 
 class Project(Base):
     """
@@ -48,6 +48,7 @@ class Project(Base):
     snapshot_path = Column(String(255))  # 스냅샷 경로
     last_snapshot_at = Column(DateTime, default=func.now())  # 마지막 스냅샷 시간
     status = Column(Boolean, default=True)  # 프로젝트 상태
+    is_active = Column(Boolean, default=True)  # 프로젝트 활성화 상태
     status_interval = Column(Integer)  # 상태 체크 주기 (초)
     expiry_d_day = Column(Integer)  # 만료일 D-day
     expiry_interval = Column(Integer)  # 만료일 알림 주기 (일)
@@ -58,4 +59,4 @@ class Project(Base):
     deleted_at = Column(DateTime, nullable=True)  # 삭제 시간
 
     # 관계 설정 (Laravel의 belongsTo와 유사)
-    user = relationship("User", back_populates="projects")
+    user = relationship("User", back_populates="projects", lazy="joined")

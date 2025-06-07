@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = os.getenv("LOG_FORMAT", "%(asctime)s [%(levelname)s] %(name)s: %(message)s")  # 로그 포맷
     LOG_DATE_FORMAT: str = os.getenv("LOG_DATE_FORMAT", "%Y-%m-%d %H:%M:%S")  # 로그 날짜 포맷
 
+    API_V1_STR: str = "/api/v1"
+
     class Config:
         env_file = ".env"
 

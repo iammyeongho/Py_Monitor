@@ -1,3 +1,14 @@
+"""
+# Laravel 개발자를 위한 설명
+# 이 파일은 Laravel의 ProjectController와 유사한 역할을 합니다.
+# FastAPI를 사용하여 프로젝트 관련 엔드포인트를 정의합니다.
+# 
+# Laravel과의 주요 차이점:
+# 1. APIRouter = Laravel의 Route::controller()와 유사
+# 2. Depends = Laravel의 dependency injection과 유사
+# 3. HTTPException = Laravel의 abort()와 유사
+"""
+
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,6 +17,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.schemas.project import Project as ProjectSchema
 from app.schemas.project import ProjectCreate, ProjectUpdate
+from app.core.security import get_current_user
 
 router = APIRouter()
 
@@ -13,11 +25,11 @@ router = APIRouter()
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """새로운 프로젝트 생성"""
+    """새로운 프로젝트를 생성합니다."""
     db_project = Project(
-        **project.model_dump(),
+        **project.dict(),
         user_id=current_user.id
     )
     db.add(db_project)
@@ -30,12 +42,12 @@ def read_projects(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """사용자의 프로젝트 목록 조회"""
+    """현재 사용자의 모든 프로젝트를 조회합니다."""
     projects = db.query(Project).filter(
         Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
+        Project.is_active == True
     ).offset(skip).limit(limit).all()
     return projects
 
@@ -43,58 +55,63 @@ def read_projects(
 def read_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """특정 프로젝트 상세 조회"""
-    project = db.query(Project).filter(
+    """특정 프로젝트를 조회합니다."""
+    db_project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
+        Project.is_active == True
     ).first()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return project
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    return db_project
 
 @router.put("/{project_id}", response_model=ProjectSchema)
 def update_project(
     project_id: int,
-    project_update: ProjectUpdate,
+    project: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """프로젝트 정보 수정"""
-    project = db.query(Project).filter(
+    """프로젝트 정보를 업데이트합니다."""
+    db_project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
+        Project.is_active == True
     ).first()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    # 업데이트할 필드만 처리
-    update_data = project_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(project, field, value)
-    
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    for key, value in project.dict().items():
+        setattr(db_project, key, value)
     db.commit()
-    db.refresh(project)
-    return project
+    db.refresh(db_project)
+    return db_project
 
-@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}", response_model=ProjectSchema)
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """프로젝트 삭제 (소프트 삭제)"""
-    project = db.query(Project).filter(
+    """프로젝트를 삭제합니다."""
+    db_project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
+        Project.is_active == True
     ).first()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    project.deleted_at = func.now()
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    db_project.is_active = False
     db.commit()
-    return None
+    db.refresh(db_project)
+    return db_project

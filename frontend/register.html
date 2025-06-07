@@ -3,20 +3,76 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>회원가입 | PyMonitor</title>
+  <title>회원가입 - Py_Monitor</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>회원가입</h1>
-    <form id="register-form">
-      <input type="email" id="email" placeholder="이메일" required autocomplete="username">
-      <input type="password" id="password" placeholder="비밀번호" required autocomplete="new-password">
-      <input type="password" id="password-confirm" placeholder="비밀번호 확인" required autocomplete="new-password">
-      <button type="submit">회원가입</button>
-    </form>
-    <a href="login.html" class="link">이미 계정이 있으신가요? 로그인</a>
+  <div class="auth-container">
+    <div class="auth-box">
+      <h1>회원가입</h1>
+      <form id="register-form" class="auth-form">
+        <div class="form-group">
+          <label for="email">이메일</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="full_name">이름</label>
+          <input type="text" id="full_name" name="full_name" required>
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+          <label for="password_confirm">비밀번호 확인</label>
+          <input type="password" id="password_confirm" name="password_confirm" required>
+        </div>
+        <button type="submit" class="btn-primary">회원가입</button>
+      </form>
+      <p class="auth-link">
+        이미 계정이 있으신가요? <a href="login.html">로그인</a>
+      </p>
+    </div>
   </div>
   <script src="monitoring.js"></script>
+  <script>
+    document.getElementById('register-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const fullName = document.getElementById('full_name').value;
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('password_confirm').value;
+      
+      if (password !== passwordConfirm) {
+        alert('비밀번호가 일치하지 않습니다.');
+        return;
+      }
+      
+      try {
+        const response = await fetch('http://localhost:8000/api/users/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email,
+            full_name: fullName,
+            password: password
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('회원가입에 실패했습니다.');
+        }
+        
+        alert('회원가입이 완료되었습니다. 로그인해주세요.');
+        window.location.href = 'login.html';
+      } catch (error) {
+        console.error('Registration error:', error);
+        alert(error.message);
+      }
+    });
+  </script>
 </body>
 </html>

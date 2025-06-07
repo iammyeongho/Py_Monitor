@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.models.project import Project
 from app.models.monitoring import MonitoringLog, MonitoringAlert
 from app.services.monitoring import MonitoringService
+from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -109,3 +110,7 @@ class MonitoringScheduler:
             except Exception as e:
                 logger.error(f"Error monitoring project {project_id}: {str(e)}")
                 await asyncio.sleep(interval)  # 에러 발생 시에도 다음 모니터링까지 대기 
+
+# 스케줄러 인스턴스 생성
+db = SessionLocal()
+scheduler = MonitoringScheduler(db) 

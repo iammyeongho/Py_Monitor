@@ -1,105 +1,94 @@
 """
 # Laravel 개발자를 위한 설명
-# 이 파일은 FastAPI 애플리케이션의 진입점입니다.
-# Laravel의 public/index.php와 유사한 역할을 합니다.
+# 이 파일은 Laravel의 app/Http/Kernel.php와 유사한 역할을 합니다.
+# FastAPI 애플리케이션의 핵심 설정과 미들웨어를 정의합니다.
 # 
-# 주요 기능:
-# 1. FastAPI 애플리케이션 설정
-# 2. 라우터 등록
-# 3. 미들웨어 설정
-# 4. 스케줄러 시작
-# 5. 에러 핸들링
-# 6. 로깅
+# Laravel과의 주요 차이점:
+# 1. FastAPI = Laravel의 Illuminate\Foundation\Application
+# 2. CORSMiddleware = Laravel의 CORS 미들웨어
+# 3. RequestLoggingMiddleware = Laravel의 로깅 미들웨어
+# 4. ErrorHandlingMiddleware = Laravel의 예외 처리 미들웨어
 """
 
-import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.endpoints import monitoring, projects, users
+import time
+import logging
+from app.core.config import settings
+from app.api.v1.api import api_router
 from app.services.scheduler import MonitoringScheduler
 from app.db.session import SessionLocal
-import asyncio
-import traceback
+from app.models.base import Base, User, Project
 
 # 로거 설정
 logger = logging.getLogger(__name__)
 
+# FastAPI 애플리케이션 생성
 app = FastAPI(
-    title="Py Monitor",
-    description="Python 기반 웹사이트 모니터링 시스템",
-    version="1.0.0"
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# CORS 설정
+# CORS 미들웨어 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 실제 운영 환경에서는 특정 도메인만 허용
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 라우터 등록
-app.include_router(users.router, prefix="/api/users", tags=["users"])
-app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
-app.include_router(monitoring.router, prefix="/api/monitoring", tags=["monitoring"])
-
-# 스케줄러 인스턴스
-scheduler = None
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """요청 로깅 미들웨어"""
-    logger.info(f"Request: {request.method} {request.url}")
-    try:
+# 요청 로깅 미들웨어
+class RequestLoggingMiddleware:
+    async def __call__(self, request: Request, call_next):
+        start_time = time.time()
         response = await call_next(request)
-        logger.info(f"Response: {response.status_code}")
+        process_time = time.time() - start_time
+        logger.info(f"{request.method} {request.url.path} completed in {process_time:.2f}s")
         return response
-    except Exception as e:
-        logger.error(f"Error processing request: {str(e)}")
-        logger.error(traceback.format_exc())
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"}
-        )
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """전역 예외 처리"""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    logger.error(traceback.format_exc())
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"}
-    )
+# 에러 처리 미들웨어
+class ErrorHandlingMiddleware:
+    async def __call__(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as e:
+            logger.error(f"Error processing request: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Internal server error"}
+            )
+
+# 미들웨어 등록
+app.middleware("http")(RequestLoggingMiddleware)
+app.middleware("http")(ErrorHandlingMiddleware)
+
+# API 라우터 등록
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# 모니터링 스케줄러 인스턴스
+scheduler = None
 
 @app.on_event("startup")
 async def startup_event():
-    """애플리케이션 시작 시 실행"""
+    """애플리케이션 시작 시 실행되는 이벤트 핸들러"""
+    logger.info("Starting application...")
     global scheduler
-    try:
-        logger.info("Starting application...")
-        db = SessionLocal()
-        scheduler = MonitoringScheduler(db)
-        await scheduler.start()
-        logger.info("Application started successfully")
-    except Exception as e:
-        logger.error(f"Error during startup: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise
+    scheduler = MonitoringScheduler(SessionLocal())
+    await scheduler.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """애플리케이션 종료 시 실행"""
+    """애플리케이션 종료 시 실행되는 이벤트 핸들러"""
+    logger.info("Shutting down application...")
     if scheduler:
-        try:
-            logger.info("Stopping application...")
-            await scheduler.stop()
-            logger.info("Application stopped successfully")
-        except Exception as e:
-            logger.error(f"Error during shutdown: {str(e)}")
-            logger.error(traceback.format_exc())
+        await scheduler.stop()
+
+@app.get("/")
+async def root():
+    """루트 엔드포인트"""
+    return {"message": "Welcome to Py_Monitor API"}
 
 if __name__ == "__main__":
     import uvicorn

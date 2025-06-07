@@ -10,36 +10,25 @@
 # 4. func.now() = Laravel의 now()와 유사
 """
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, func
+from sqlalchemy import Boolean, Column, Integer, String, DateTime
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from app.db.session import Base
+from app.db.base_class import Base
 
 class User(Base):
-    """
-    # Laravel의 User 모델과 유사한 역할
-    # 
-    # 주요 필드:
-    # - id: 기본 키 (Laravel의 $primaryKey)
-    # - email: 사용자 이메일 (unique 제약조건)
-    # - password_hash: 해시된 비밀번호
-    # - status: 계정 상태 (active/inactive)
-    # - last_login_at: 마지막 로그인 시간
-    # - last_login_ip: 마지막 로그인 IP
-    # - created_at, updated_at: Laravel의 timestamps와 동일
-    # - deleted_at: 소프트 삭제를 위한 필드 (Laravel의 softDeletes)
-    """
-    __tablename__ = "users"  # Laravel의 protected $table = 'users'
+    """사용자 모델"""
+    __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)  # Laravel의 $primaryKey
-    email = Column(String(255), unique=True, nullable=False)  # unique() 제약조건
-    password_hash = Column(String(255), nullable=False)  # 비밀번호 해시 저장
-    status = Column(Boolean, default=True)  # 계정 활성화 상태
-    last_login_at = Column(DateTime, default=func.now())  # 마지막 로그인 시간
-    last_login_ip = Column(String(45))  # IPv6 대응
-    created_at = Column(DateTime, default=func.now())  # Laravel의 $timestamps
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())  # 자동 업데이트
-    deleted_at = Column(DateTime, nullable=True)  # Laravel의 softDeletes
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # 관계 설정 (Laravel의 hasMany와 유사)
     # cascade="all, delete-orphan"은 Laravel의 onDelete('cascade')와 유사
     projects = relationship("Project", back_populates="user", cascade="all, delete-orphan")
+    email_logs = relationship("EmailLog", back_populates="user", cascade="all, delete-orphan")

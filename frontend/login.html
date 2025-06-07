@@ -3,19 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>로그인 | PyMonitor</title>
+  <title>로그인 - Py_Monitor</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>로그인</h1>
-    <form id="login-form">
-      <input type="email" id="email" placeholder="이메일" required autocomplete="username">
-      <input type="password" id="password" placeholder="비밀번호" required autocomplete="current-password">
-      <button type="submit">로그인</button>
-    </form>
-    <a href="register.html" class="link">아직 회원이 아니신가요? 회원가입</a>
+  <div class="auth-container">
+    <div class="auth-box">
+      <h1>로그인</h1>
+      <form id="login-form" class="auth-form">
+        <div class="form-group">
+          <label for="email">이메일</label>
+          <input type="email" id="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn-primary">로그인</button>
+      </form>
+      <p class="auth-link">
+        계정이 없으신가요? <a href="register.html">회원가입</a>
+      </p>
+    </div>
   </div>
   <script src="monitoring.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      try {
+        const response = await fetch('http://localhost:8000/api/users/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            'username': email,
+            'password': password,
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('로그인에 실패했습니다.');
+        }
+        
+        const data = await response.json();
+        localStorage.setItem('auth_token', data.access_token);
+        
+        alert('로그인 성공!');
+        window.location.href = 'index.html';
+      } catch (error) {
+        console.error('Login error:', error);
+        alert(error.message);
+      }
+    });
+  </script>
 </body>
 </html>

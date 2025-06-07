@@ -1,79 +1,54 @@
-from fastapi import APIRouter, Depends, HTTPException
+"""
+# Laravel 개발자를 위한 설명
+# 이 파일은 Laravel의 MonitoringController와 유사한 역할을 합니다.
+# FastAPI를 사용하여 모니터링 관련 엔드포인트를 정의합니다.
+# 
+# Laravel과의 주요 차이점:
+# 1. APIRouter = Laravel의 Route::controller()와 유사
+# 2. Depends = Laravel의 dependency injection과 유사
+# 3. HTTPException = Laravel의 abort()와 유사
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.deps import get_db, get_current_active_user
-from app.models.user import User
+from typing import List
+from app.db.session import get_db
 from app.models.project import Project
-from app.schemas.monitoring import (
-    MonitoringCheckRequest,
-    MonitoringCheckResponse,
-    MonitoringStatus,
-    SSLStatus
-)
-from app.services.monitoring_service import MonitoringService
-from urllib.parse import urlparse
+from app.schemas.monitoring import MonitoringResponse
+from app.core.security import get_current_user
+from app.services.monitoring import check_project_status
 
 router = APIRouter()
 
-@router.post("/check", response_model=MonitoringCheckResponse)
-async def check_website(
-    request: MonitoringCheckRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """웹사이트 상태 체크"""
-    # URL에서 호스트네임 추출
-    parsed_url = urlparse(str(request.url))
-    hostname = parsed_url.netloc
-
-    # 웹사이트 상태 체크
-    status = await MonitoringService.check_website(
-        str(request.url),
-        timeout=request.timeout
-    )
-
-    # SSL 체크 (요청된 경우)
-    ssl_status = None
-    if request.check_ssl and parsed_url.scheme == 'https':
-        ssl_status = MonitoringService.check_ssl(hostname)
-
-    return MonitoringCheckResponse(
-        status=status,
-        ssl=ssl_status
-    )
-
-@router.get("/project/{project_id}/status", response_model=MonitoringCheckResponse)
-async def check_project_status(
+@router.get("/status/{project_id}", response_model=MonitoringResponse)
+def get_project_status(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user = Depends(get_current_user)
 ):
-    """프로젝트 상태 체크"""
-    # 프로젝트 조회
-    project = db.query(Project).filter(
+    """프로젝트의 현재 상태를 확인합니다."""
+    db_project = db.query(Project).filter(
         Project.id == project_id,
         Project.user_id == current_user.id,
-        Project.deleted_at.is_(None)
+        Project.is_active == True
     ).first()
-    
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    
-    if not project.url:
-        raise HTTPException(status_code=400, detail="Project URL is not set")
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    status = check_project_status(db_project)
+    return status
 
-    # 웹사이트 상태 체크
-    status = await MonitoringService.check_website(
-        project.url,
-        timeout=30
-    )
-
-    # SSL 체크 (HTTPS인 경우)
-    ssl_status = None
-    if project.url.startswith('https://'):
-        parsed_url = urlparse(project.url)
-        ssl_status = MonitoringService.check_ssl(parsed_url.netloc)
-
-    return MonitoringCheckResponse(
-        status=status,
-        ssl=ssl_status
-    )
+@router.get("/status", response_model=List[MonitoringResponse])
+def get_all_projects_status(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """현재 사용자의 모든 프로젝트 상태를 확인합니다."""
+    projects = db.query(Project).filter(
+        Project.user_id == current_user.id,
+        Project.is_active == True
+    ).all()
+    statuses = [check_project_status(project) for project in projects]
+    return statuses
