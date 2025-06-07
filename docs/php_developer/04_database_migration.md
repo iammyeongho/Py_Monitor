@@ -52,7 +52,7 @@ posts = user.posts
 
 ### 4.2.1 Laravel의 마이그레이션
 ```php
-// database/migrations/2024_03_20_create_users_table.php
+// database/migrations/2025_06_01_create_users_table.php
 class CreateUsersTable extends Migration
 {
     public function up()

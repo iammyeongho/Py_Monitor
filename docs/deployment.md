@@ -141,7 +141,7 @@ pg_dump py_monitor > backup_$(date +%Y%m%d).sql
 ### 5.2 복구 프로세스
 ```bash
 # 데이터베이스 복구
-psql py_monitor < backup_20240101.sql
+psql py_monitor < backup_20250601.sql
 ```
 
 ## 6. SSL/TLS 설정

@@ -45,7 +45,7 @@ describe('Monitoring Dashboard', () => {
     });
 
     test('날짜 포맷팅', () => {
-        const date = new Date('2024-01-01T12:00:00');
+        const date = new Date('2025-06-01T12:00:00');
         const formatted = formatDate(date.toISOString());
         expect(formatted).toMatch(/\d{4}년 \d{2}월 \d{2}일 \d{2}:\d{2}/);
     });

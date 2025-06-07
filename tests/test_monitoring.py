@@ -209,7 +209,7 @@ async def test_check_ssl_status_success(monitoring_service, mock_project):
         
         mock_ssl_socket = Mock()
         mock_ssl_socket.getpeercert.return_value = {
-            "notAfter": "Dec 31 23:59:59 2024 GMT"
+            "notAfter": "Dec 31 23:59:59 2025 GMT"
         }
         mock_context.return_value.wrap_socket.return_value = mock_ssl_socket
         

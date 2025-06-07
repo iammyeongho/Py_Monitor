@@ -24,9 +24,9 @@ git checkout -b fix/login-bug
 - `[YYYYMMDD] <type>: <내용>`
 - type 예시: feat, fix, docs, refactor, test, chore
 - 예시:
-  - `[20240523] feat: 모니터링 API 엔드포인트 추가`
-  - `[20240523] fix: 로그인 버그 수정`
-  - `[20240523] docs: 개발 가이드 문서 추가`
+  - `[20250523] feat: 모니터링 API 엔드포인트 추가`
+  - `[20250523] fix: 로그인 버그 수정`
+  - `[20250523] docs: 개발 가이드 문서 추가`
 
 ---
 
