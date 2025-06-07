@@ -20,6 +20,7 @@ from app.api.v1.api import api_router
 from app.services.scheduler import MonitoringScheduler
 from app.db.session import SessionLocal
 from app.models.base import Base, User, Project
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # 로거 설정
 logger = logging.getLogger(__name__)
@@ -39,18 +40,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 요청 로깅 미들웨어
-class RequestLoggingMiddleware:
-    async def __call__(self, request: Request, call_next):
+# 요청 로깅 미들웨어 (표준 방식)
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
         start_time = time.time()
         response = await call_next(request)
         process_time = time.time() - start_time
         logger.info(f"{request.method} {request.url.path} completed in {process_time:.2f}s")
         return response
 
-# 에러 처리 미들웨어
-class ErrorHandlingMiddleware:
-    async def __call__(self, request: Request, call_next):
+# 에러 처리 미들웨어 (표준 방식)
+class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
         try:
             return await call_next(request)
         except Exception as e:
@@ -60,9 +61,9 @@ class ErrorHandlingMiddleware:
                 content={"detail": "Internal server error"}
             )
 
-# 미들웨어 등록
-app.middleware("http")(RequestLoggingMiddleware)
-app.middleware("http")(ErrorHandlingMiddleware)
+# 미들웨어 등록 (add_middleware 사용)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(ErrorHandlingMiddleware)
 
 # API 라우터 등록
 app.include_router(api_router, prefix=settings.API_V1_STR)

@@ -12,7 +12,7 @@
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from app.db.base import Base
+from app.db.base_class import Base
 from datetime import datetime
 
 class MonitoringLog(Base):
@@ -37,6 +37,9 @@ class MonitoringLog(Base):
     error_message = Column(Text)  # 오류 메시지
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
 
+    # 관계 설정
+    project = relationship("Project", back_populates="monitoring_logs")
+
 class MonitoringAlert(Base):
     """
     # 모니터링 알림 모델 (Laravel의 MonitoringAlert 모델과 유사)
@@ -60,6 +63,9 @@ class MonitoringAlert(Base):
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Laravel의 $timestamps
 
+    # 관계 설정
+    project = relationship("Project", back_populates="monitoring_alerts")
+
 class MonitoringSetting(Base):
     """
     # 모니터링 설정 모델 (Laravel의 MonitoringSetting 모델과 유사)
@@ -81,4 +87,7 @@ class MonitoringSetting(Base):
     retry_count = Column(Integer)  # 재시도 횟수
     alert_threshold = Column(Integer)  # 알림 임계값
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Laravel의 $timestamps 
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Laravel의 $timestamps
+
+    # 관계 설정
+    project = relationship("Project", back_populates="monitoring_settings") 
