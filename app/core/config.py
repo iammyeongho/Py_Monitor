@@ -9,6 +9,7 @@
 # 3. 이메일 설정
 # 4. 보안 설정
 # 5. 모니터링 설정
+# 6. 로깅 설정
 """
 
 from pydantic_settings import BaseSettings
@@ -55,6 +56,15 @@ class Settings(BaseSettings):
     # 웹사이트 모니터링 관련 기본 설정
     DEFAULT_CHECK_INTERVAL: int = int(os.getenv("DEFAULT_CHECK_INTERVAL", "300"))  # 기본 체크 간격 (초)
     DEFAULT_TIMEOUT: int = int(os.getenv("DEFAULT_TIMEOUT", "30"))  # 기본 타임아웃 (초)
+
+    # 로깅 설정
+    # 로그 관련 설정
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    LOG_DIR: str = os.getenv("LOG_DIR", "logs")  # 로그 디렉토리
+    LOG_MAX_BYTES: int = int(os.getenv("LOG_MAX_BYTES", "10485760"))  # 로그 파일 최대 크기 (10MB)
+    LOG_BACKUP_COUNT: int = int(os.getenv("LOG_BACKUP_COUNT", "5"))  # 로그 파일 백업 개수
+    LOG_FORMAT: str = os.getenv("LOG_FORMAT", "%(asctime)s [%(levelname)s] %(name)s: %(message)s")  # 로그 포맷
+    LOG_DATE_FORMAT: str = os.getenv("LOG_DATE_FORMAT", "%Y-%m-%d %H:%M:%S")  # 로그 날짜 포맷
 
     class Config:
         env_file = ".env"
