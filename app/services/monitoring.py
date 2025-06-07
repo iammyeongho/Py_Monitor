@@ -33,7 +33,7 @@ from app.models.project_log import ProjectLog
 from app.models.request_log import RequestLog
 from app.models.internal_log import InternalLog
 from app.core.config import settings
-from app.utils.email import send_email_alert
+from app.utils.notifications import NotificationService
 from sqlalchemy import and_
 import logging
 
@@ -162,6 +162,7 @@ class MonitoringService:
     def __init__(self, db: Session):
         self.db = db
         self._monitoring_tasks: Dict[int, asyncio.Task] = {}
+        self.notification_service = NotificationService()
 
     async def check_project_status(self, project_id: int) -> MonitoringStatus:
         """프로젝트 상태 확인"""
@@ -230,6 +231,11 @@ class MonitoringService:
         message: str
     ) -> MonitoringAlert:
         """알림 생성"""
+        project = self.db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+
+        # 알림 생성
         alert = MonitoringAlert(
             project_id=project_id,
             alert_type=alert_type,
@@ -238,6 +244,37 @@ class MonitoringService:
         self.db.add(alert)
         self.db.commit()
         self.db.refresh(alert)
+
+        # 알림 데이터 준비
+        alert_data = {
+            "project_name": project.title,
+            "project_url": project.url,
+            "error_message": message,
+            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # 이메일 알림 전송
+        if project.user.email:
+            template = self.notification_service.get_alert_template(alert_type)
+            await self.notification_service.send_email_notification(
+                email=project.user.email,
+                subject=f"[모니터링 알림] {project.title}",
+                template=template,
+                data=alert_data
+            )
+
+        # 웹훅 알림 전송
+        if project.webhook_url:
+            await self.notification_service.send_webhook_notification(
+                webhook_url=project.webhook_url,
+                data={
+                    "type": alert_type,
+                    "project": project.title,
+                    "message": message,
+                    "timestamp": datetime.now().isoformat()
+                }
+            )
+
         return alert
 
     async def create_log(self, log_data: MonitoringLogCreate) -> MonitoringLog:
@@ -258,10 +295,16 @@ class MonitoringService:
         # 이메일 알림 전송
         project = self.db.query(Project).filter(Project.id == alert.project_id).first()
         if project and project.user.email:
-            await send_email_alert(
+            await self.notification_service.send_email_notification(
                 email=project.user.email,
                 subject=f"모니터링 알림: {project.title}",
-                message=alert.message
+                template=self.notification_service.get_alert_template(alert.alert_type),
+                data={
+                    "project_name": project.title,
+                    "project_url": project.url,
+                    "error_message": alert.message,
+                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
             )
         
         return alert

@@ -1,11 +1,28 @@
+"""
+# Laravel 개발자를 위한 설명
+# 이 파일은 모니터링 서비스의 테스트를 구현합니다.
+# Laravel의 PHPUnit 테스트와 유사한 역할을 합니다.
+# 
+# 주요 테스트:
+# 1. 프로젝트 상태 확인
+# 2. SSL 인증서 확인
+# 3. 도메인 만료일 확인
+# 4. 알림 생성
+"""
+
 import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
+from unittest.mock import Mock, patch, AsyncMock
+import asyncio
+import ssl
 
 from app.models.user import User
 from app.models.project import Project
 from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSetting
+from app.schemas.monitoring import MonitoringStatus
+from app.services.monitoring import MonitoringService
 
 @pytest.fixture
 def test_project(db: Session):
@@ -124,4 +141,140 @@ def test_get_monitoring_settings(client, db: Session, test_project):
     assert data["check_interval"] == settings.check_interval
     assert data["timeout"] == settings.timeout
     assert data["retry_count"] == settings.retry_count
-    assert data["alert_threshold"] == settings.alert_threshold 
+    assert data["alert_threshold"] == settings.alert_threshold
+
+@pytest.fixture
+def mock_db():
+    """테스트용 DB 세션"""
+    return Mock()
+
+@pytest.fixture
+def mock_project():
+    """테스트용 프로젝트"""
+    return Project(
+        id=1,
+        title="Test Project",
+        url="https://example.com",
+        user_id=1,
+        is_active=True
+    )
+
+@pytest.fixture
+def monitoring_service(mock_db):
+    """테스트용 모니터링 서비스"""
+    return MonitoringService(mock_db)
+
+@pytest.mark.asyncio
+async def test_check_project_status_success(monitoring_service, mock_project):
+    """프로젝트 상태 확인 성공 테스트"""
+    mock_db = monitoring_service.db
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_project
+    
+    with patch("aiohttp.ClientSession") as mock_session:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__.return_value = mock_response
+        
+        status = await monitoring_service.check_project_status(1)
+        
+        assert status.is_available == True
+        assert status.status_code == 200
+        assert status.error_message is None
+
+@pytest.mark.asyncio
+async def test_check_project_status_failure(monitoring_service, mock_project):
+    """프로젝트 상태 확인 실패 테스트"""
+    mock_db = monitoring_service.db
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_project
+    
+    with patch("aiohttp.ClientSession") as mock_session:
+        mock_session.return_value.__aenter__.return_value.get.side_effect = Exception("Connection error")
+        
+        status = await monitoring_service.check_project_status(1)
+        
+        assert status.is_available == False
+        assert status.status_code is None
+        assert "Connection error" in status.error_message
+
+@pytest.mark.asyncio
+async def test_check_ssl_status_success(monitoring_service, mock_project):
+    """SSL 인증서 확인 성공 테스트"""
+    with patch("ssl.create_default_context") as mock_context, \
+         patch("socket.create_connection") as mock_connection:
+        
+        mock_ssl_socket = Mock()
+        mock_ssl_socket.getpeercert.return_value = {
+            "notAfter": "Dec 31 23:59:59 2024 GMT"
+        }
+        mock_context.return_value.wrap_socket.return_value = mock_ssl_socket
+        
+        result = await monitoring_service.check_ssl_status(mock_project)
+        
+        assert result["is_valid"] == True
+        assert isinstance(result["expiry_date"], datetime)
+        assert result["error_message"] is None
+
+@pytest.mark.asyncio
+async def test_check_ssl_status_failure(monitoring_service, mock_project):
+    """SSL 인증서 확인 실패 테스트"""
+    with patch("ssl.create_default_context") as mock_context:
+        mock_context.return_value.wrap_socket.side_effect = ssl.SSLError("SSL error")
+        
+        result = await monitoring_service.check_ssl_status(mock_project)
+        
+        assert result["is_valid"] == False
+        assert result["expiry_date"] is None
+        assert "SSL error" in result["error_message"]
+
+@pytest.mark.asyncio
+async def test_create_alert(monitoring_service, mock_project):
+    """알림 생성 테스트"""
+    mock_db = monitoring_service.db
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_project
+    
+    with patch.object(monitoring_service.notification_service, "send_email_notification") as mock_email, \
+         patch.object(monitoring_service.notification_service, "send_webhook_notification") as mock_webhook:
+        
+        alert = await monitoring_service.create_alert(
+            project_id=1,
+            alert_type="status_error",
+            message="Test alert"
+        )
+        
+        assert alert.project_id == 1
+        assert alert.alert_type == "status_error"
+        assert alert.message == "Test alert"
+        
+        mock_email.assert_called_once()
+        mock_webhook.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_monitoring_task(monitoring_service, mock_project):
+    """모니터링 작업 테스트"""
+    mock_db = monitoring_service.db
+    mock_db.query.return_value.filter.return_value.first.return_value = mock_project
+    
+    with patch.object(monitoring_service, "check_project_status") as mock_status, \
+         patch.object(monitoring_service, "check_ssl_status") as mock_ssl, \
+         patch.object(monitoring_service, "create_alert") as mock_alert:
+        
+        mock_status.return_value = MonitoringStatus(
+            is_available=True,
+            response_time=0.1,
+            status_code=200,
+            error_message=None
+        )
+        
+        mock_ssl.return_value = {
+            "is_valid": True,
+            "expiry_date": datetime.now() + timedelta(days=30),
+            "error_message": None
+        }
+        
+        await monitoring_service.start_monitoring(1)
+        await asyncio.sleep(0.1)  # 작업이 실행될 시간을 줌
+        await monitoring_service.stop_monitoring(1)
+        
+        mock_status.assert_called()
+        mock_ssl.assert_called()
+        mock_alert.assert_not_called()  # 정상 상태이므로 알림이 생성되지 않아야 함 
