@@ -67,6 +67,24 @@
   - `pip install [패키지명]` : 파이썬 패키지 설치
   - `lsof -i :포트번호` : 해당 포트를 사용 중인 프로세스 확인
 
+## 2025-06-08 프로젝트 구조 점검 및 마이그레이션 체인 정리
+
+### 주요 변경 및 점검 내역
+- .env 파일 환경 변수 정상 로딩 확인
+- app/models/__init__.py에서 불필요한 import 및 존재하지 않는 모델(import) 제거
+    - InternalLog, Notification, Alert 등 실제 정의되지 않은 모델 import 제거
+    - MonitoringLog, MonitoringAlert, MonitoringSetting만 import 및 __all__에 포함
+- Alembic 마이그레이션 체인 정리
+    - 중복/불필요한 create_monitoring_tables.py 파일 삭제
+    - initial_migration.py → monitoring_tables.py로 단일 체인 구성
+    - alembic/env.py에서 settings.DATABASE_URL → settings.SQLALCHEMY_DATABASE_URI로 수정
+- DB 마이그레이션 정상 완료 및 테이블 생성 확인
+- 전체 구간(환경 변수, DB, 모델, 마이그레이션) 순차 점검 및 정상화
+
+### 향후 작업
+- 서버 실행 및 엔드포인트 정상 동작 확인
+- 추가적인 기능 개발 및 문서화
+
 ---
 
 > 모든 커밋 및 작업 내역은 GitHub 저장소의 커밋 히스토리와 일치합니다.

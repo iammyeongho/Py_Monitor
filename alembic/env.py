@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # 데이터베이스 URL 설정
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.SQLALCHEMY_DATABASE_URI)
 
 def run_migrations_offline() -> None:
     """오프라인 마이그레이션 실행"""
