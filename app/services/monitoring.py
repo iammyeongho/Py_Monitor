@@ -1,13 +1,13 @@
 """
 # Laravel 개발자를 위한 설명
-# 이 파일은 모니터링 관련 비즈니스 로직을 구현합니다.
+# 이 파일은 모니터링 서비스를 구현합니다.
 # Laravel의 Service 클래스와 유사한 역할을 합니다.
 # 
 # 주요 기능:
-# 1. 프로젝트 상태 모니터링
+# 1. 프로젝트 상태 확인
 # 2. SSL 인증서 확인
-# 3. 알림 관리
-# 4. 로그 기록
+# 3. 도메인 만료일 확인
+# 4. 알림 생성
 """
 
 from sqlalchemy.orm import Session
@@ -17,7 +17,8 @@ from app.schemas.monitoring import (
     MonitoringAlertCreate,
     MonitoringSettingCreate,
     MonitoringSettingUpdate,
-    SSLDomainStatusCreate
+    SSLDomainStatusCreate,
+    MonitoringStatus
 )
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
@@ -34,6 +35,9 @@ from app.models.internal_log import InternalLog
 from app.core.config import settings
 from app.utils.email import send_email_alert
 from sqlalchemy import and_
+import logging
+
+logger = logging.getLogger(__name__)
 
 def create_monitoring_log(db: Session, log: MonitoringLogCreate) -> MonitoringLog:
     """모니터링 로그 생성"""
@@ -153,111 +157,88 @@ def update_monitoring_setting(
     return db_setting
 
 class MonitoringService:
+    """모니터링 서비스"""
+    
     def __init__(self, db: Session):
         self.db = db
         self._monitoring_tasks: Dict[int, asyncio.Task] = {}
 
-    async def check_project_status(self, project: Project) -> Dict[str, Any]:
+    async def check_project_status(self, project_id: int) -> MonitoringStatus:
         """프로젝트 상태 확인"""
+        project = self.db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValueError(f"Project {project_id} not found")
+        
         try:
             async with aiohttp.ClientSession() as session:
                 start_time = datetime.now()
                 async with session.get(project.url, timeout=30) as response:
                     response_time = (datetime.now() - start_time).total_seconds()
-                    status = response.status < 400
                     
-                    # 로그 기록
-                    log = MonitoringLogCreate(
-                        project_id=project.id,
-                        status=status,
+                    return MonitoringStatus(
+                        is_available=True,
                         response_time=response_time,
-                        http_code=response.status,
-                        error_message=None if status else f"HTTP {response.status}"
+                        status_code=response.status,
+                        error_message=None
                     )
-                    await self.create_log(log)
-                    
-                    return {
-                        "status": status,
-                        "response_time": response_time,
-                        "http_code": response.status,
-                        "error_message": None if status else f"HTTP {response.status}"
-                    }
         except Exception as e:
-            # 오류 로그 기록
-            log = MonitoringLogCreate(
-                project_id=project.id,
-                status=False,
+            logger.error(f"Error checking project {project_id}: {str(e)}")
+            return MonitoringStatus(
+                is_available=False,
                 response_time=None,
-                http_code=None,
+                status_code=None,
                 error_message=str(e)
             )
-            await self.create_log(log)
-            
-            return {
-                "status": False,
-                "response_time": None,
-                "http_code": None,
-                "error_message": str(e)
-            }
-
-    async def check_ssl_status(self, project: Project) -> Dict[str, Any]:
+    
+    async def check_ssl_status(self, project: Project) -> dict:
         """SSL 인증서 상태 확인"""
         try:
-            domain = project.url.split("//")[-1].split("/")[0]
+            hostname = project.url.split("//")[-1].split("/")[0]
             context = ssl.create_default_context()
-            with socket.create_connection((domain, 443)) as sock:
-                with context.wrap_socket(sock, server_hostname=domain) as ssock:
+            with socket.create_connection((hostname, 443)) as sock:
+                with context.wrap_socket(sock, server_hostname=hostname) as ssock:
                     cert = ssock.getpeercert()
                     expiry_date = datetime.strptime(cert['notAfter'], '%b %d %H:%M:%S %Y %Z')
-                    is_valid = expiry_date > datetime.now()
-                    
-                    # SSL 상태 업데이트
-                    ssl_status = SSLDomainStatusCreate(
-                        project_id=project.id,
-                        domain=domain,
-                        ssl_status=is_valid,
-                        ssl_expiry=expiry_date,
-                        domain_expiry=None  # 도메인 만료일은 별도로 확인
-                    )
-                    await self.update_ssl_status(ssl_status)
                     
                     return {
-                        "is_valid": is_valid,
+                        "is_valid": True,
                         "expiry_date": expiry_date,
-                        "days_remaining": (expiry_date - datetime.now()).days
+                        "error_message": None
                     }
         except Exception as e:
+            logger.error(f"Error checking SSL for project {project.id}: {str(e)}")
             return {
                 "is_valid": False,
                 "expiry_date": None,
-                "days_remaining": None,
                 "error_message": str(e)
             }
-
+    
     async def check_domain_expiry(self, project: Project) -> Optional[datetime]:
         """도메인 만료일 확인"""
         try:
             domain = project.url.split("//")[-1].split("/")[0]
-            domain_info = whois.whois(domain)
-            if domain_info.expiration_date:
-                if isinstance(domain_info.expiration_date, list):
-                    expiry_date = domain_info.expiration_date[0]
-                else:
-                    expiry_date = domain_info.expiration_date
-                
-                # SSL 상태 업데이트
-                ssl_status = SSLDomainStatusCreate(
-                    project_id=project.id,
-                    domain=domain,
-                    ssl_status=True,  # SSL 상태는 변경하지 않음
-                    ssl_expiry=None,  # SSL 만료일은 변경하지 않음
-                    domain_expiry=expiry_date
-                )
-                await self.update_ssl_status(ssl_status)
-                
-                return expiry_date
-        except Exception:
+            w = whois.whois(domain)
+            return w.expiration_date
+        except Exception as e:
+            logger.error(f"Error checking domain expiry for project {project.id}: {str(e)}")
             return None
+    
+    async def create_alert(
+        self,
+        project_id: int,
+        alert_type: str,
+        message: str
+    ) -> MonitoringAlert:
+        """알림 생성"""
+        alert = MonitoringAlert(
+            project_id=project_id,
+            alert_type=alert_type,
+            message=message
+        )
+        self.db.add(alert)
+        self.db.commit()
+        self.db.refresh(alert)
+        return alert
 
     async def create_log(self, log_data: MonitoringLogCreate) -> MonitoringLog:
         """모니터링 로그 생성"""
@@ -267,7 +248,7 @@ class MonitoringService:
         self.db.refresh(log)
         return log
 
-    async def create_alert(self, alert_data: MonitoringAlertCreate) -> MonitoringAlert:
+    async def create_monitoring_alert(self, alert_data: MonitoringAlertCreate) -> MonitoringAlert:
         """모니터링 알림 생성"""
         alert = MonitoringAlert(**alert_data.dict())
         self.db.add(alert)
@@ -357,39 +338,23 @@ class MonitoringService:
             while True:
                 try:
                     # 상태 확인
-                    status = await self.check_project_status(project)
-                    if not status["status"]:
-                        await self.create_alert(MonitoringAlertCreate(
-                            project_id=project_id,
-                            alert_type="status_error",
-                            message=f"프로젝트 상태 오류: {status['error_message']}"
-                        ))
+                    status = await self.check_project_status(project_id)
+                    if not status.is_available:
+                        await self.create_alert(project_id, "status_error", status.error_message)
                     
                     # SSL 상태 확인
                     ssl_status = await self.check_ssl_status(project)
                     if not ssl_status["is_valid"]:
-                        await self.create_alert(MonitoringAlertCreate(
-                            project_id=project_id,
-                            alert_type="ssl_error",
-                            message=f"SSL 인증서 만료: {ssl_status['error_message']}"
-                        ))
+                        await self.create_alert(project_id, "ssl_error", ssl_status["error_message"])
                     
                     # 도메인 만료일 확인
                     domain_expiry = await self.check_domain_expiry(project)
                     if domain_expiry and (domain_expiry - datetime.now()).days <= 30:
-                        await self.create_alert(MonitoringAlertCreate(
-                            project_id=project_id,
-                            alert_type="domain_expiry",
-                            message=f"도메인 만료 예정: {domain_expiry.strftime('%Y-%m-%d')}"
-                        ))
+                        await self.create_alert(project_id, "domain_expiry", f"도메인 만료 예정: {domain_expiry.strftime('%Y-%m-%d')}")
                     
                     await asyncio.sleep(settings.check_interval)
                 except Exception as e:
-                    await self.create_alert(MonitoringAlertCreate(
-                        project_id=project_id,
-                        alert_type="monitoring_error",
-                        message=f"모니터링 오류: {str(e)}"
-                    ))
+                    await self.create_alert(project_id, "monitoring_error", f"모니터링 오류: {str(e)}")
                     await asyncio.sleep(60)  # 오류 발생 시 1분 대기
         
         self._monitoring_tasks[project_id] = asyncio.create_task(monitor_task())
