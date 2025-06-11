@@ -64,65 +64,8 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- 대시보드: 프로젝트 카드 렌더링 (예시 데이터) ---
-if (document.getElementById('dashboard')) {
-  // 실제로는 API에서 받아와야 함
-  const projects = [
-    {
-      id: 1,
-      title: '테스트 서버',
-      url: 'https://test.com',
-      status: 'ok',
-      statusText: '정상',
-      interval: 60,
-      snapshot: 'https://via.placeholder.com/400x300?text=Test+Server',
-      sslStatus: '유효',
-      sslExpiry: '2025-12-31',
-      domainExpiry: '2025-01-15',
-      jsMetrics: 'A+ (98점)'
-    },
-    {
-      id: 2,
-      title: 'API 서버',
-      url: 'https://api.com',
-      status: 'error',
-      statusText: '오류',
-      interval: 30,
-      snapshot: 'https://via.placeholder.com/400x300?text=API+Server',
-      sslStatus: '만료',
-      sslExpiry: '2025-03-01',
-      domainExpiry: '2025-12-31',
-      jsMetrics: 'B (85점)'
-    },
-    {
-      id: 3,
-      title: 'DB 서버',
-      url: 'https://db.com',
-      status: 'warn',
-      statusText: '느림',
-      interval: 120,
-      snapshot: 'https://via.placeholder.com/400x300?text=DB+Server',
-      sslStatus: '없음',
-      sslExpiry: null,
-      domainExpiry: '2025-06-30',
-      jsMetrics: 'A (92점)'
-    }
-  ];
-  const dashboard = document.getElementById('dashboard');
-  dashboard.innerHTML = projects.map(p => `
-    <div class="card">
-      <div class="snapshot-container">
-        <img src="${p.snapshot}" alt="${p.title} 스냅샷">
-        <div class="snapshot-overlay">
-          <span class="status ${p.status}">${p.statusText}</span>
-        </div>
-      </div>
-      <div class="card-content">
-        <h3>${p.title}</h3>
-        <button onclick="openDetailModal(${p.id})" class="detail-btn">상세보기</button>
-      </div>
-    </div>
-  `).join('');
-}
+// (예시 데이터 제거)
+// 실제로는 API에서 받아와야 함
 
 // --- 프로젝트 등록/수정 폼 제출 (예시) ---
 if (document.getElementById('project-form')) {
@@ -293,35 +236,35 @@ async function updateDashboard() {
         
         if (!dashboard) return;
         
-        dashboard.innerHTML = await Promise.all(projects.map(async project => {
-            const settings = await getMonitoringSettings(project.id);
-            const alerts = await getMonitoringAlerts(project.id, false);
-            
-            return `
+        let html = '';
+        for (const p of projects) {
+            const alerts = await getMonitoringAlerts(p.id, false);
+            html += `
                 <div class="card">
                     <div class="snapshot-container">
-                        <img src="${project.snapshot_path || 'https://via.placeholder.com/400x300?text=No+Snapshot'}" 
-                             alt="${project.title} snapshot">
+                        <img src="${p.snapshot_path || 'https://via.placeholder.com/400x300?text=No+Snapshot'}" 
+                             alt="${p.title} snapshot">
                         <div class="snapshot-overlay">
-                            <span class="status ${project.status}">${project.status_text}</span>
+                            <span class="status ${p.status}">${p.status_text}</span>
                         </div>
                     </div>
                     <div class="card-content">
-                        <h3>${project.title}</h3>
-                        <p>${project.url}</p>
+                        <h3>${p.title}</h3>
+                        <p>${p.url}</p>
                         <div class="metrics">
-                            <span class="metric ${project.ssl_status === '유효' ? 'ok' : 'error'}">
-                                SSL: ${project.ssl_status}
+                            <span class="metric ${p.ssl_status === '유효' ? 'ok' : 'error'}">
+                                SSL: ${p.ssl_status}
                             </span>
                             <span class="metric">
                                 알림: ${alerts.length}개
                             </span>
                         </div>
-                        <button onclick="openDetailModal(${project.id})" class="detail-btn">상세보기</button>
+                        <button onclick="openDetailModal(${p.id})" class="detail-btn">상세보기</button>
                     </div>
                 </div>
             `;
-        })).join('');
+        }
+        dashboard.innerHTML = html;
     } catch (error) {
         console.error('Error updating dashboard:', error);
     }

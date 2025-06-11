@@ -95,4 +95,11 @@ pytest
 
 ## 라이선스
 
-MIT License 
+MIT License
+
+## 프론트엔드 실행 및 접근 방법
+
+- 프론트엔드(대시보드 등)는 반드시 FastAPI 서버를 통해 접근해야 합니다.
+- 브라우저에서 아래 주소로 접속하세요:
+  - http://localhost:8000/frontend/index.html
+- **절대 file:// 경로로 직접 HTML 파일을 열지 마세요.** (CSS/JS가 동작하지 않음) 
