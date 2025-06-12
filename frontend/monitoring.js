@@ -71,9 +71,9 @@ window.addEventListener('DOMContentLoaded', function() {
 if (document.getElementById('project-form')) {
   document.getElementById('project-form').onsubmit = function(e) {
     e.preventDefault();
-    // 실제로는 fetch로 API 호출
-    alert('프로젝트가 저장되었습니다! (실제 저장은 API 연동 필요)');
-    window.location.href = 'index.html';
+    // TODO: 실제로는 fetch로 API 호출하여 프로젝트를 저장해야 합니다.
+    // alert('프로젝트가 저장되었습니다! (실제 저장은 API 연동 필요)');
+    // window.location.href = 'index.html';
   };
 }
 
@@ -81,17 +81,17 @@ if (document.getElementById('project-form')) {
 if (document.getElementById('login-form')) {
   document.getElementById('login-form').onsubmit = function(e) {
     e.preventDefault();
-    // 실제로는 fetch로 API 호출
-    alert('로그인 성공! (실제 인증은 API 연동 필요)');
-    window.location.href = 'index.html';
+    // TODO: 실제로는 fetch로 API 호출하여 인증해야 합니다.
+    // alert('로그인 성공! (실제 인증은 API 연동 필요)');
+    // window.location.href = 'index.html';
   };
 }
 if (document.getElementById('register-form')) {
   document.getElementById('register-form').onsubmit = function(e) {
     e.preventDefault();
-    // 실제로는 fetch로 API 호출
-    alert('회원가입 성공! (실제 저장은 API 연동 필요)');
-    window.location.href = 'login.html';
+    // TODO: 실제로는 fetch로 API 호출하여 회원가입을 처리해야 합니다.
+    // alert('회원가입 성공! (실제 저장은 API 연동 필요)');
+    // window.location.href = 'login.html';
   };
 }
 
