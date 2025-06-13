@@ -7,6 +7,7 @@ FastAPI 기반의 웹사이트 모니터링 시스템 메인 애플리케이션 
 import app.core.logging_config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.core.config import settings
 
@@ -28,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 정적 파일 제공 설정
+app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 
 # API 라우터 등록
 # /api/v1 경로 아래에 모든 API 엔드포인트를 등록합니다.

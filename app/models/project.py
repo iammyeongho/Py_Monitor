@@ -61,6 +61,7 @@ class Project(Base):
     # 관계 설정 (Laravel의 belongsTo와 유사)
     user = relationship("User", back_populates="projects", lazy="joined")
     monitoring_logs = relationship("MonitoringLog", back_populates="project", cascade="all, delete-orphan")
+    project_logs = relationship("ProjectLog", back_populates="project", cascade="all, delete-orphan")
     monitoring_alerts = relationship("MonitoringAlert", back_populates="project", cascade="all, delete-orphan")
     monitoring_settings = relationship("MonitoringSetting", back_populates="project", cascade="all, delete-orphan", uselist=False)
     notifications = relationship("Notification", back_populates="project", cascade="all, delete-orphan")
