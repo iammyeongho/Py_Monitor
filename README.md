@@ -49,8 +49,12 @@ cp .env.example .env
 # .env 파일을 편집하여 필요한 설정을 입력
 ```
 
-5. 데이터베이스 마이그레이션
+5. 데이터베이스 설정
 ```bash
+# PostgreSQL 데이터베이스 생성
+createdb py_monitor
+
+# 데이터베이스 마이그레이션
 PYTHONPATH=$PYTHONPATH:. alembic upgrade head
 ```
 
@@ -58,6 +62,49 @@ PYTHONPATH=$PYTHONPATH:. alembic upgrade head
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+## 환경 변수 설정
+
+`.env` 파일에 다음 설정이 필요합니다:
+
+```env
+# 데이터베이스 설정
+POSTGRES_SERVER=localhost
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=py_monitor
+POSTGRES_PORT=5432
+
+# 보안 설정
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=11520  # 8 days
+
+# 이메일 설정
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_TLS=True
+SMTP_USERNAME=Py Monitor
+SMTP_FROM=your_email@gmail.com
+
+# 모니터링 설정
+DEFAULT_CHECK_INTERVAL=300  # 5분
+DEFAULT_TIMEOUT=30  # 30초
+```
+
+## 모니터링 설정
+
+각 프로젝트별로 다음 설정을 관리할 수 있습니다:
+
+- 상태 체크 주기 (기본값: 300초)
+- 응답 시간 제한 (기본값: 5초)
+- 만료일 D-day (기본값: 30일)
+- 알림 주기 설정
+  - 상태 체크 실패 시 알림 주기
+  - 만료일 알림 주기
+  - 응답 시간 초과 시 알림 주기
 
 ## API 문서
 
@@ -102,4 +149,20 @@ MIT License
 - 프론트엔드(대시보드 등)는 반드시 FastAPI 서버를 통해 접근해야 합니다.
 - 브라우저에서 아래 주소로 접속하세요:
   - http://localhost:8000/frontend/index.html
-- **절대 file:// 경로로 직접 HTML 파일을 열지 마세요.** (CSS/JS가 동작하지 않음) 
+- **절대 file:// 경로로 직접 HTML 파일을 열지 마세요.** (CSS/JS가 동작하지 않음)
+
+## 문제 해결
+
+1. 데이터베이스 연결 오류
+   - PostgreSQL 서버가 실행 중인지 확인
+   - 데이터베이스 접속 정보가 올바른지 확인
+   - 데이터베이스가 생성되어 있는지 확인
+
+2. 이메일 알림 오류
+   - SMTP 설정이 올바른지 확인
+   - Gmail을 사용하는 경우 앱 비밀번호 설정 필요
+
+3. 모니터링 실패
+   - 대상 URL이 올바른지 확인
+   - 방화벽 설정 확인
+   - 네트워크 연결 상태 확인 
