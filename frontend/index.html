@@ -133,6 +133,86 @@
     </div>
   </div>
 
-  <script src="monitoring.js"></script>
+  <!-- JavaScript -->
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/project.js"></script>
+  <script src="/frontend/js/monitoring.js"></script>
+  <script>
+      // 페이지 로드 시 인증 확인
+      document.addEventListener('DOMContentLoaded', () => {
+          if (!auth.checkAuth()) return;
+          
+          // 프로젝트 목록 로드
+          loadProjects();
+      });
+      
+      // 프로젝트 목록 로드
+      async function loadProjects() {
+          try {
+              const projects = await project.getProjects();
+              const projectList = document.getElementById('projectList');
+              projectList.innerHTML = '';
+              
+              projects.forEach(project => {
+                  const projectElement = createProjectElement(project);
+                  projectList.appendChild(projectElement);
+              });
+          } catch (error) {
+              console.error('프로젝트 목록 로드 오류:', error);
+              alert('프로젝트 목록을 불러오는데 실패했습니다.');
+          }
+      }
+      
+      // 프로젝트 요소 생성
+      function createProjectElement(project) {
+          const div = document.createElement('div');
+          div.className = 'project-item';
+          div.innerHTML = `
+              <h3>${project.title}</h3>
+              <p>URL: ${project.url}</p>
+              <p>상태: ${project.status ? '정상' : '오류'}</p>
+              <button onclick="viewProjectDetail(${project.id})">상세보기</button>
+          `;
+          return div;
+      }
+      
+      // 프로젝트 상세보기
+      async function viewProjectDetail(projectId) {
+          try {
+              const projectDetail = await project.getProjectDetail(projectId);
+              const monitoringStatus = await monitoring.getMonitoringStatus(projectId);
+              
+              // 상세 정보 표시
+              document.getElementById('projectDetail').style.display = 'block';
+              document.getElementById('projectTitle').textContent = projectDetail.title;
+              document.getElementById('projectUrl').textContent = projectDetail.url;
+              document.getElementById('projectStatus').textContent = 
+                  monitoringStatus.status ? '정상' : '오류';
+              
+              // 실시간 모니터링 시작
+              const ws = monitoring.startRealtimeMonitoring(projectId, (data) => {
+                  updateMonitoringStatus(data);
+              });
+              
+              // 페이지 이탈 시 WebSocket 연결 종료
+              window.addEventListener('beforeunload', () => {
+                  ws.close();
+              });
+          } catch (error) {
+              console.error('프로젝트 상세 정보 로드 오류:', error);
+              alert('프로젝트 상세 정보를 불러오는데 실패했습니다.');
+          }
+      }
+      
+      // 모니터링 상태 업데이트
+      function updateMonitoringStatus(data) {
+          document.getElementById('projectStatus').textContent = 
+              data.status ? '정상' : '오류';
+          document.getElementById('responseTime').textContent = 
+              data.response_time ? `${data.response_time}ms` : 'N/A';
+          document.getElementById('lastCheck').textContent = 
+              new Date(data.last_check).toLocaleString();
+      }
+  </script>
 </body>
 </html>
