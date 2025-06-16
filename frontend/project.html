@@ -3,36 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>프로젝트 등록 | PyMonitor</title>
-  <link rel="stylesheet" href="style.css">
+  <title>프로젝트 관리 | PyMonitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/frontend/style.css">
 </head>
 <body>
   <div class="container">
-    <h1>프로젝트 등록</h1>
-    <form id="project-form">
-      <input type="text" id="title" placeholder="프로젝트명" required>
-      <input type="text" id="host-name" placeholder="호스트명 (예: example.com)" required>
-      <input type="text" id="ip-address" placeholder="IP 주소 (예: 192.168.0.1)" required>
-      <input type="url" id="url" placeholder="URL (예: https://example.com)" required>
-      <button type="button" id="open-setting">모니터링 주기 설정</button>
-      <button type="submit">저장</button>
-    </form>
-    <a href="index.html" class="link">대시보드로 돌아가기</a>
-  </div>
-  <!-- 모니터링 주기 설정 팝업 -->
-  <div class="modal" id="setting-modal" style="display:none;">
-    <div class="modal-content">
-      <h3>모니터링 주기 설정</h3>
-      <form id="setting-form">
-        <input type="number" id="check-interval" placeholder="체크 주기(초)" min="10" required>
-        <input type="number" id="timeout" placeholder="타임아웃(초)" min="1" required>
-        <input type="number" id="retry-count" placeholder="재시도 횟수" min="0" required>
-        <input type="number" id="alert-threshold" placeholder="알림 임계값" min="1" required>
-        <button type="submit">저장</button>
-        <button type="button" id="close-modal" style="background:#eee;color:#333;margin-top:8px;">닫기</button>
-      </form>
+    <header class="header">
+      <h1>프로젝트 관리</h1>
+      <button id="logout-btn" class="btn btn-secondary">로그아웃</button>
+    </header>
+
+    <div class="content">
+      <div class="project-list">
+        <h2>프로젝트 목록</h2>
+        <button id="create-project-btn" class="btn btn-primary">새 프로젝트</button>
+        <div id="projects-container"></div>
+      </div>
+
+      <div class="project-detail" id="project-detail" style="display: none;">
+        <h2>프로젝트 상세</h2>
+        <div id="project-info"></div>
+        <div id="monitoring-status"></div>
+        <div id="monitoring-logs"></div>
+      </div>
     </div>
   </div>
-  <script src="monitoring.js"></script>
+
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/project.js"></script>
+  <script src="/frontend/js/monitoring.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 인증 확인
+      if (!auth.checkAuth()) {
+        return;
+      }
+
+      // 프로젝트 목록 로드
+      await loadProjects();
+
+      // 이벤트 리스너 설정
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        auth.logout();
+      });
+
+      document.getElementById('create-project-btn').addEventListener('click', () => {
+        const name = prompt('프로젝트 이름을 입력하세요:');
+        if (name) {
+          createProject({ name });
+        }
+      });
+    });
+
+    async function loadProjects() {
+      try {
+        const projects = await project.getProjects();
+        const container = document.getElementById('projects-container');
+        container.innerHTML = '';
+
+        projects.forEach(project => {
+          const element = createProjectElement(project);
+          container.appendChild(element);
+        });
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+        alert('프로젝트 목록을 불러오는데 실패했습니다.');
+      }
+    }
+
+    function createProjectElement(project) {
+      const div = document.createElement('div');
+      div.className = 'project-item';
+      div.innerHTML = `
+        <h3>${project.name}</h3>
+        <p>상태: ${project.status}</p>
+        <button onclick="viewProjectDetail(${project.id})" class="btn btn-secondary">상세보기</button>
+      `;
+      return div;
+    }
+
+    async function viewProjectDetail(projectId) {
+      try {
+        const projectData = await project.getProjectDetail(projectId);
+        const detailContainer = document.getElementById('project-detail');
+        const infoContainer = document.getElementById('project-info');
+        
+        infoContainer.innerHTML = `
+          <h3>${projectData.name}</h3>
+          <p>URL: ${projectData.url}</p>
+          <p>상태: ${projectData.status}</p>
+        `;
+        
+        detailContainer.style.display = 'block';
+        
+        // 모니터링 상태 로드
+        const status = await monitoring.getMonitoringStatus(projectId);
+        updateMonitoringStatus(status);
+        
+        // 실시간 모니터링 시작
+        monitoring.startRealtimeMonitoring(projectId, (data) => {
+          updateMonitoringStatus(data);
+        });
+      } catch (error) {
+        console.error('Failed to load project detail:', error);
+        alert('프로젝트 상세 정보를 불러오는데 실패했습니다.');
+      }
+    }
+
+    function updateMonitoringStatus(data) {
+      const statusContainer = document.getElementById('monitoring-status');
+      statusContainer.innerHTML = `
+        <h4>모니터링 상태</h4>
+        <p>응답 시간: ${data.response_time}ms</p>
+        <p>상태: ${data.status}</p>
+        <p>마지막 확인: ${new Date(data.last_check).toLocaleString()}</p>
+      `;
+    }
+
+    async function createProject(data) {
+      try {
+        await project.createProject(data);
+        await loadProjects();
+      } catch (error) {
+        console.error('Failed to create project:', error);
+        alert('프로젝트 생성에 실패했습니다.');
+      }
+    }
+  </script>
 </body>
 </html>
