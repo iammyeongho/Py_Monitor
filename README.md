@@ -125,11 +125,17 @@ Py_Monitor/
 │   ├── schemas/         # Pydantic 스키마
 │   ├── services/        # 비즈니스 로직
 │   └── utils/           # 유틸리티 함수
-├── tests/               # 테스트 코드
-├── .env                 # 환경 변수
-├── .env.example         # 환경 변수 예제
-├── requirements.txt     # 의존성 목록
-└── README.md           # 프로젝트 문서
+├── frontend/
+│   ├── html/           # HTML 파일
+│   ├── js/             # JavaScript 모듈
+│   └── style.css       # 스타일시트
+├── tests/
+│   ├── test_api/       # API 테스트
+│   ├── test_services/  # 서비스 테스트
+│   └── conftest.py     # 테스트 설정
+├── .env                # 환경 변수
+├── requirements.txt    # 의존성 목록
+└── README.md          # 프로젝트 문서
 ```
 
 ## 테스트

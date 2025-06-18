@@ -32,6 +32,7 @@ app.add_middleware(
 
 # 정적 파일 제공 설정
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+app.mount("/frontend/html", StaticFiles(directory="frontend/html"), name="frontend_html")
 
 # API 라우터 등록
 # /api/v1 경로 아래에 모든 API 엔드포인트를 등록합니다.
