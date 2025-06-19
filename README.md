@@ -128,10 +128,11 @@ Py_Monitor/
 ├── frontend/
 │   ├── html/           # HTML 파일
 │   ├── js/             # JavaScript 모듈
-│   └── style.css       # 스타일시트
+│   └── style/          # 스타일시트
 ├── tests/
 │   ├── test_api/       # API 테스트
 │   ├── test_services/  # 서비스 테스트
+│   ├── test_frontend/  # 프론트엔드 테스트
 │   └── conftest.py     # 테스트 설정
 ├── .env                # 환경 변수
 ├── requirements.txt    # 의존성 목록
