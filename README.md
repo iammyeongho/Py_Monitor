@@ -21,46 +21,67 @@
 - JWT
 - aiohttp
 - python-whois
+- Docker
+- Redis
 
-## 설치 및 실행
+## 빠른 시작
 
-1. 저장소 클론
+### Docker를 사용한 실행 (권장)
+
 ```bash
+# 저장소 클론
 git clone https://github.com/yourusername/Py_Monitor.git
 cd Py_Monitor
+
+# Docker Compose로 서비스 시작
+make docker-up
+
+# 또는 직접 실행
+docker-compose up -d
 ```
 
-2. 가상환경 생성 및 활성화
+### 로컬 개발 환경
+
 ```bash
+# 저장소 클론
+git clone https://github.com/yourusername/Py_Monitor.git
+cd Py_Monitor
+
+# 가상환경 생성 및 활성화
 python -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 # 또는
 .venv\Scripts\activate  # Windows
-```
 
-3. 의존성 설치
-```bash
-pip install -r requirements.txt
-```
+# 의존성 설치
+make install
 
-4. 환경 변수 설정
-```bash
+# 환경 변수 설정
 cp .env.example .env
 # .env 파일을 편집하여 필요한 설정을 입력
-```
-
-5. 데이터베이스 설정
-```bash
-# PostgreSQL 데이터베이스 생성
-createdb py_monitor
 
 # 데이터베이스 마이그레이션
-PYTHONPATH=$PYTHONPATH:. alembic upgrade head
+make migrate
+
+# 개발 서버 실행
+make dev
 ```
 
-6. 서버 실행
+## Makefile 명령어
+
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+make help          # 사용 가능한 명령어 확인
+make install       # 의존성 설치
+make test          # 테스트 실행
+make run           # 프로덕션 서버 실행
+make dev           # 개발 서버 실행
+make docker-build  # Docker 이미지 빌드
+make docker-up     # Docker Compose로 서비스 시작
+make docker-down   # Docker Compose로 서비스 중지
+make clean         # 캐시 및 임시 파일 정리
+make migrate       # 데이터베이스 마이그레이션
+make lint          # 코드 린팅
+make format        # 코드 포맷팅
 ```
 
 ## 환경 변수 설정
@@ -68,17 +89,25 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 `.env` 파일에 다음 설정이 필요합니다:
 
 ```env
+# 환경 설정
+ENVIRONMENT=development
+DEBUG=true
+
 # 데이터베이스 설정
+DATABASE_URL=postgresql://postgres:password@localhost:5432/py_monitor
 POSTGRES_SERVER=localhost
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_password
 POSTGRES_DB=py_monitor
 POSTGRES_PORT=5432
 
+# Redis 설정 (선택사항)
+REDIS_URL=redis://localhost:6379
+
 # 보안 설정
 SECRET_KEY=your_secret_key
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=11520  # 8 days
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # 이메일 설정
 SMTP_HOST=smtp.gmail.com
@@ -92,6 +121,10 @@ SMTP_FROM=your_email@gmail.com
 # 모니터링 설정
 DEFAULT_CHECK_INTERVAL=300  # 5분
 DEFAULT_TIMEOUT=30  # 30초
+
+# 로깅 설정
+LOG_LEVEL=INFO
+LOG_DIR=logs
 ```
 
 ## 모니터링 설정
@@ -134,9 +167,44 @@ Py_Monitor/
 │   ├── test_services/  # 서비스 테스트
 │   ├── test_frontend/  # 프론트엔드 테스트
 │   └── conftest.py     # 테스트 설정
+├── docs/               # 문서
+├── scripts/            # 스크립트
+├── logs/               # 로그 파일
 ├── .env                # 환경 변수
 ├── requirements.txt    # 의존성 목록
+├── Dockerfile          # Docker 이미지 설정
+├── docker-compose.yml  # Docker Compose 설정
+├── Makefile           # 개발 명령어
+├── pyproject.toml     # 프로젝트 설정
 └── README.md          # 프로젝트 문서
+```
+
+## 개발 가이드
+
+### 코드 품질 관리
+
+```bash
+# 코드 포맷팅
+make format
+
+# 코드 린팅
+make lint
+
+# 테스트 실행 (커버리지 포함)
+make test
+```
+
+### Docker 개발 환경
+
+```bash
+# 개발용 Docker Compose 실행
+docker-compose -f docker-compose.dev.yml up -d
+
+# 로그 확인
+docker-compose logs -f app
+
+# 컨테이너 내부 접속
+docker-compose exec app bash
 ```
 
 ## 테스트
@@ -144,7 +212,42 @@ Py_Monitor/
 테스트를 실행하려면 다음 명령어를 사용합니다:
 
 ```bash
-pytest
+# 전체 테스트
+make test
+
+# 특정 테스트만 실행
+pytest tests/test_api/ -v
+
+# 커버리지 리포트 생성
+pytest --cov=app --cov-report=html
+```
+
+## 배포
+
+### Docker를 사용한 배포
+
+```bash
+# 프로덕션 빌드
+docker build -t py-monitor:latest .
+
+# 프로덕션 실행
+docker run -d -p 8000:8000 --env-file .env.prod py-monitor:latest
+```
+
+### 수동 배포
+
+```bash
+# 의존성 설치
+pip install -r requirements.txt
+
+# 환경 변수 설정
+export ENVIRONMENT=production
+
+# 데이터베이스 마이그레이션
+alembic upgrade head
+
+# 서버 실행
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## 라이선스
@@ -155,7 +258,7 @@ MIT License
 
 - 프론트엔드(대시보드 등)는 반드시 FastAPI 서버를 통해 접근해야 합니다.
 - 브라우저에서 아래 주소로 접속하세요:
-  - http://localhost:8000/frontend/index.html
+  - http://localhost:8000/frontend/html/index.html
 - **절대 file:// 경로로 직접 HTML 파일을 열지 마세요.** (CSS/JS가 동작하지 않음)
 
 ## 문제 해결
@@ -172,4 +275,9 @@ MIT License
 3. 모니터링 실패
    - 대상 URL이 올바른지 확인
    - 방화벽 설정 확인
-   - 네트워크 연결 상태 확인 
+   - 네트워크 연결 상태 확인
+
+4. Docker 관련 문제
+   - Docker와 Docker Compose가 설치되어 있는지 확인
+   - 포트 충돌이 없는지 확인 (8000, 5432, 6379)
+   - 컨테이너 로그 확인: `docker-compose logs -f` 

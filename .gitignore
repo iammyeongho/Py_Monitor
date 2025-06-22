@@ -10,6 +10,8 @@ ENV/
 
 # pytest
 .pytest_cache/
+.coverage
+htmlcov/
 
 # 환경 변수
 .env
@@ -21,6 +23,9 @@ ENV/
 # VSCode
 .vscode/
 
+# PyCharm
+.idea/
+
 # node
 frontend/node_modules/
 
@@ -28,4 +33,61 @@ frontend/node_modules/
 *.log
 
 # logs
-logs/ 
+logs/
+
+# Docker
+.dockerignore
+
+# IDE
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Coverage reports
+coverage.xml
+.coverage.*
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/ 
