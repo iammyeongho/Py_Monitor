@@ -5,9 +5,10 @@ FastAPI 기반의 웹사이트 모니터링 시스템 메인 애플리케이션 
 """
 
 import app.core.logging_config
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from app.api.v1.router import api_router
 from app.core.config import settings
 
@@ -32,13 +33,17 @@ app.add_middleware(
 
 # 정적 파일 제공 설정
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
-app.mount("/frontend/html", StaticFiles(directory="frontend/html"), name="frontend_html")
-app.mount("/frontend/style", StaticFiles(directory="frontend/style"), name="frontend_style")
 app.mount("/test_frontend", StaticFiles(directory="tests/test_frontend"), name="test_frontend")
 
 # API 라우터 등록
 # /api/v1 경로 아래에 모든 API 엔드포인트를 등록합니다.
 app.include_router(api_router, prefix="/api/v1")
+
+# 루트 경로 리다이렉트
+@app.get("/")
+def root():
+    """루트 경로를 대시보드로 리다이렉트"""
+    return RedirectResponse(url="/frontend/html/index.html")
 
 # 헬스 체크 엔드포인트
 # 시스템의 상태를 확인하기 위한 엔드포인트입니다.
