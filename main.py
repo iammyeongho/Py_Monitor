@@ -33,6 +33,7 @@ app.add_middleware(
 
 # 정적 파일 제공 설정
 app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
+app.mount("/", StaticFiles(directory="frontend/html", html=True), name="static_html")
 app.mount("/test_frontend", StaticFiles(directory="tests/test_frontend"), name="test_frontend")
 
 # API 라우터 등록
@@ -43,7 +44,7 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/")
 def root():
     """루트 경로를 대시보드로 리다이렉트"""
-    return RedirectResponse(url="/frontend/html/index.html")
+    return RedirectResponse(url="/index.html")
 
 # 헬스 체크 엔드포인트
 # 시스템의 상태를 확인하기 위한 엔드포인트입니다.

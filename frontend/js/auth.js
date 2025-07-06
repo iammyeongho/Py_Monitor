@@ -17,7 +17,7 @@ const auth = {
             
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
-            window.location.href = '/frontend/index.html';
+            window.location.href = '/index.html';
         } catch (error) {
             console.error('로그인 오류:', error);
             alert(error.message);
@@ -40,7 +40,7 @@ const auth = {
             }
             
             alert('회원가입이 완료되었습니다. 로그인해주세요.');
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
         } catch (error) {
             console.error('회원가입 오류:', error);
             alert(error.message);
@@ -50,14 +50,14 @@ const auth = {
     // 로그아웃 함수
     logout() {
         localStorage.removeItem('token');
-        window.location.href = '/frontend/login.html';
+        window.location.href = '/login.html';
     },
     
     // 토큰 확인 함수
     checkAuth() {
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/frontend/login.html';
+            window.location.href = '/login.html';
             return false;
         }
         return true;
