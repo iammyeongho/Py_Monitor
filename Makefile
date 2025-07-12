@@ -25,11 +25,11 @@ test:
 
 # 프로덕션 서버 실행
 run:
-	uvicorn app.main:app --host 0.0.0.0 --port 8000
+	uvicorn main:app --host 0.0.0.0 --port 8000
 
 # 개발 서버 실행
 dev:
-	uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Docker 이미지 빌드
 docker-build:

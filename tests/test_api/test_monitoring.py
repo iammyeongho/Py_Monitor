@@ -18,7 +18,7 @@ from unittest.mock import Mock, patch, AsyncMock
 import asyncio
 import ssl
 from fastapi.testclient import TestClient
-from app.main import app
+from main import app
 from app.models.project import Project
 from app.db.session import SessionLocal
 

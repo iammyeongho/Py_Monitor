@@ -15,7 +15,7 @@ from app.utils.notifications import NotificationService
 from datetime import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from app.main import app
+from main import app
 from app.models.project import Project
 from app.models.notification import Notification
 from app.db.session import SessionLocal
