@@ -15,7 +15,7 @@ def get_test_token():
     """테스트용 토큰 획득"""
     # 사용자 생성
     client.post(
-        "/api/v1/users/",
+        "/api/v1/auth/",
         json={
             "email": "project_test@example.com",
             "password": "testpassword123",
@@ -25,7 +25,7 @@ def get_test_token():
     
     # 로그인
     response = client.post(
-        "/api/v1/users/login",
+        "/api/v1/auth/login",
         data={
             "username": "project_test@example.com",
             "password": "testpassword123"

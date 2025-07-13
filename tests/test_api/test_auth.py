@@ -15,7 +15,7 @@ client = TestClient(app)
 def test_create_user():
     """사용자 생성 테스트"""
     response = client.post(
-        "/api/v1/users/",
+        "/api/v1/auth/",
         json={
             "email": "test@example.com",
             "password": "testpassword123",
@@ -32,7 +32,7 @@ def test_login():
     """로그인 테스트"""
     # 먼저 사용자 생성
     client.post(
-        "/api/v1/users/",
+        "/api/v1/auth/",
         json={
             "email": "login@example.com",
             "password": "testpassword123",
@@ -42,7 +42,7 @@ def test_login():
     
     # 로그인 시도
     response = client.post(
-        "/api/v1/users/login",
+        "/api/v1/auth/login",
         data={
             "username": "login@example.com",
             "password": "testpassword123"
@@ -57,7 +57,7 @@ def test_get_current_user():
     """현재 사용자 정보 조회 테스트"""
     # 로그인하여 토큰 획득
     login_response = client.post(
-        "/api/v1/users/login",
+        "/api/v1/auth/login",
         data={
             "username": "login@example.com",
             "password": "testpassword123"
@@ -67,7 +67,7 @@ def test_get_current_user():
     
     # 현재 사용자 정보 조회
     response = client.get(
-        "/api/v1/users/me",
+        "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert response.status_code == 200
@@ -78,7 +78,7 @@ def test_update_user():
     """사용자 정보 업데이트 테스트"""
     # 로그인하여 토큰 획득
     login_response = client.post(
-        "/api/v1/users/login",
+        "/api/v1/auth/login",
         data={
             "username": "login@example.com",
             "password": "testpassword123"
@@ -88,7 +88,7 @@ def test_update_user():
     
     # 사용자 정보 업데이트
     response = client.put(
-        "/api/v1/users/me",
+        "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {token}"},
         json={
             "full_name": "Updated Name",
@@ -102,7 +102,7 @@ def test_update_user():
 def test_invalid_login():
     """잘못된 로그인 시도 테스트"""
     response = client.post(
-        "/api/v1/users/login",
+        "/api/v1/auth/login",
         data={
             "username": "wrong@example.com",
             "password": "wrongpassword"
@@ -113,7 +113,7 @@ def test_invalid_login():
 def test_invalid_token():
     """잘못된 토큰으로 접근 시도 테스트"""
     response = client.get(
-        "/api/v1/users/me",
+        "/api/v1/auth/me",
         headers={"Authorization": "Bearer invalid_token"}
     )
     assert response.status_code == 401 
