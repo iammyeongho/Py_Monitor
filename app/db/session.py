@@ -5,8 +5,7 @@
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
 # 데이터베이스 엔진 생성
@@ -15,7 +14,7 @@ engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
 # 세션 생성
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base 클래스 생성
+# Base 클래스 생성 (SQLAlchemy 2.0 스타일)
 Base = declarative_base()
 
 # 데이터베이스 세션 의존성
