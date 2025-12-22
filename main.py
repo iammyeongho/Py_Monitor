@@ -22,10 +22,10 @@ app = FastAPI(
 
 # CORS 미들웨어 설정
 # 프론트엔드와의 통신을 위한 CORS 정책을 설정합니다.
-# 실제 운영 환경에서는 보안을 위해 특정 도메인만 허용하도록 수정해야 합니다.
+# 환경 변수를 통해 허용할 도메인을 지정할 수 있습니다.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 실제 운영 환경에서는 특정 도메인만 허용하도록 수정
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

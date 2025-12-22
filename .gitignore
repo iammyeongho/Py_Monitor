@@ -15,7 +15,8 @@ htmlcov/
 
 # 환경 변수
 .env
-.env.*
+.env.local
+.env.*.local
 
 # macOS
 .DS_Store
