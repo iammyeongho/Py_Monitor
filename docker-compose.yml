@@ -5,9 +5,9 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: py_monitor
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-py_monitor}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -34,11 +34,12 @@ services:
   # Py_Monitor 애플리케이션
   app:
     build: .
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/py_monitor
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
       - REDIS_URL=redis://redis:6379
-      - SECRET_KEY=your-secret-key-here
-      - LOG_LEVEL=INFO
     ports:
       - "8000:8000"
     depends_on:
