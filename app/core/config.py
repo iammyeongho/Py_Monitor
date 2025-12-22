@@ -12,7 +12,7 @@
 # 6. 로깅 설정
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 import os
 from dotenv import load_dotenv
@@ -68,8 +68,10 @@ class Settings(BaseSettings):
 
     API_V1_STR: str = "/api/v1"
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
