@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 이메일 관련 비즈니스 로직을 구현합니다.
 # Laravel의 Mail 클래스와 유사한 역할을 합니다.
-# 
+#
 # 주요 기능:
 # 1. 이메일 발송
 # 2. 이메일 템플릿 관리
@@ -19,6 +19,7 @@ from email.mime.multipart import MIMEMultipart
 from app.models.email_log import EmailLog
 from app.core.config import settings
 
+
 class EmailService:
     def __init__(self, db: Session):
         self.db = db
@@ -29,7 +30,7 @@ class EmailService:
         email: str,
         subject: str,
         body: str,
-        project_id: Optional[int] = None
+        project_id: Optional[int] = None,
     ) -> EmailLog:
         """이메일 발송"""
         # 이메일 로그 생성
@@ -39,7 +40,7 @@ class EmailService:
             email=email,
             subject=subject,
             body=body,
-            status="pending"
+            status="pending",
         )
         self.db.add(email_log)
         self.db.commit()
@@ -57,7 +58,7 @@ class EmailService:
             async with aiosmtplib.SMTP(
                 hostname=settings.SMTP_HOST,
                 port=settings.SMTP_PORT,
-                use_tls=settings.SMTP_TLS
+                use_tls=settings.SMTP_TLS,
             ) as smtp:
                 await smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
                 await smtp.send_message(message)
@@ -78,29 +79,27 @@ class EmailService:
         return email_log
 
     def get_email_logs(
-        self,
-        user_id: int,
-        skip: int = 0,
-        limit: int = 100
+        self, user_id: int, skip: int = 0, limit: int = 100
     ) -> List[EmailLog]:
         """이메일 로그 조회"""
-        return self.db.query(EmailLog)\
-            .filter(EmailLog.user_id == user_id)\
-            .order_by(EmailLog.created_at.desc())\
-            .offset(skip)\
-            .limit(limit)\
+        return (
+            self.db.query(EmailLog)
+            .filter(EmailLog.user_id == user_id)
+            .order_by(EmailLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
+        )
 
     def get_project_email_logs(
-        self,
-        project_id: int,
-        skip: int = 0,
-        limit: int = 100
+        self, project_id: int, skip: int = 0, limit: int = 100
     ) -> List[EmailLog]:
         """프로젝트 관련 이메일 로그 조회"""
-        return self.db.query(EmailLog)\
-            .filter(EmailLog.project_id == project_id)\
-            .order_by(EmailLog.created_at.desc())\
-            .offset(skip)\
-            .limit(limit)\
+        return (
+            self.db.query(EmailLog)
+            .filter(EmailLog.project_id == project_id)
+            .order_by(EmailLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
+        )

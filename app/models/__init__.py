@@ -22,5 +22,5 @@ __all__ = [
     "SSLDomainStatus",
     "RequestLog",
     "InternalLog",
-    "ProjectLog"
+    "ProjectLog",
 ]

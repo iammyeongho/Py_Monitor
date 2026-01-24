@@ -17,6 +17,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Base 클래스 생성 (SQLAlchemy 2.0 스타일)
 Base = declarative_base()
 
+
 # 데이터베이스 세션 의존성
 def get_db():
     db = SessionLocal()

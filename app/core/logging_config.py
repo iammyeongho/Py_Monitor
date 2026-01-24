@@ -11,7 +11,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
-from app.core.config import settings
 
 # 로그 디렉토리 설정
 LOG_DIR = os.getenv("LOG_DIR", "logs")
@@ -27,23 +26,28 @@ LOG_LEVEL_MAP = {
     "INFO": logging.INFO,
     "WARNING": logging.WARNING,
     "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL
+    "CRITICAL": logging.CRITICAL,
 }
 
 # 로그 포맷 설정
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+
 # 로그 필터 설정
 class RequestFilter(logging.Filter):
     """요청 관련 로그 필터"""
+
     def filter(self, record):
         return not record.getMessage().startswith("Request:")
 
+
 class ResponseFilter(logging.Filter):
     """응답 관련 로그 필터"""
+
     def filter(self, record):
         return not record.getMessage().startswith("Response:")
+
 
 # 로깅 기본 설정
 logging.basicConfig(
@@ -52,13 +56,10 @@ logging.basicConfig(
     datefmt=LOG_DATE_FORMAT,
     handlers=[
         RotatingFileHandler(
-            LOG_FILE,
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
-            encoding="utf-8"
+            LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"  # 10MB
         ),
-        logging.StreamHandler()
-    ]
+        logging.StreamHandler(),
+    ],
 )
 
 # 로그 필터 적용
@@ -69,4 +70,4 @@ for handler in logging.getLogger().handlers:
 
 # 로거 설정
 logger = logging.getLogger(__name__)
-logger.info(f"Logging initialized with level: {LOG_LEVEL}") 
+logger.info(f"Logging initialized with level: {LOG_LEVEL}")

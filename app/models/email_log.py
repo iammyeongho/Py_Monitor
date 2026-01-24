@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 Laravel의 EmailLog 모델과 유사한 역할을 합니다.
 # SQLAlchemy ORM을 사용하여 email_logs 테이블을 정의합니다.
-# 
+#
 # Laravel과의 주요 차이점:
 # 1. __tablename__ = "email_logs"  # Laravel의 protected $table = 'email_logs'와 동일
 # 2. Column() = Laravel의 $fillable과 유사하지만, 타입과 제약조건을 직접 지정
@@ -15,12 +15,16 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
+
 class EmailLog(Base):
     """이메일 로그 모델"""
+
     __tablename__ = "email_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     recipient = Column(String, nullable=False)
     subject = Column(String, nullable=False)
     body = Column(Text, nullable=False)

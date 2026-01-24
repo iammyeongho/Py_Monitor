@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 사용자 관련 비즈니스 로직을 구현합니다.
 # Laravel의 UserService와 유사한 역할을 합니다.
-# 
+#
 # 주요 기능:
 # 1. 사용자 CRUD
 # 2. 인증 관리
@@ -19,6 +19,7 @@ from app.schemas.user import UserCreate, UserUpdate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+
 class UserService:
     def __init__(self, db: Session):
         self.db = db
@@ -31,7 +32,7 @@ class UserService:
             hashed_password=hashed_password,
             full_name=user.full_name,
             is_active=True,
-            is_superuser=user.is_superuser
+            is_superuser=user.is_superuser,
         )
         self.db.add(db_user)
         self.db.commit()
@@ -46,23 +47,17 @@ class UserService:
         """이메일로 사용자 조회"""
         return self.db.query(User).filter(User.email == email).first()
 
-    def get_users(
-        self,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[User]:
+    def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
         """사용자 목록 조회"""
-        return self.db.query(User)\
-            .order_by(User.created_at.desc())\
-            .offset(skip)\
-            .limit(limit)\
+        return (
+            self.db.query(User)
+            .order_by(User.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
+        )
 
-    def update_user(
-        self,
-        user_id: int,
-        user: UserUpdate
-    ) -> Optional[User]:
+    def update_user(self, user_id: int, user: UserUpdate) -> Optional[User]:
         """사용자 정보 업데이트"""
         db_user = self.get_user(user_id)
         if not db_user:
@@ -70,11 +65,13 @@ class UserService:
 
         update_data = user.dict(exclude_unset=True)
         if "password" in update_data:
-            update_data["hashed_password"] = pwd_context.hash(update_data.pop("password"))
+            update_data["hashed_password"] = pwd_context.hash(
+                update_data.pop("password")
+            )
 
         for key, value in update_data.items():
             setattr(db_user, key, value)
-        
+
         db_user.updated_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(db_user)

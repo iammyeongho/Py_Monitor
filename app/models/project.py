@@ -2,21 +2,30 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 Laravel의 Project 모델과 유사한 역할을 합니다.
 # SQLAlchemy ORM을 사용하여 projects 테이블을 정의합니다.
-# 
+#
 # Laravel과의 주요 차이점:
 # 1. ForeignKey() = Laravel의 foreign()와 유사
 # 2. relationship() = Laravel의 belongsTo()와 유사
 # 3. ondelete="CASCADE" = Laravel의 onDelete('cascade')와 유사
 """
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Text, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    func,
+)
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
+
 
 class Project(Base):
     """
     # Laravel의 Project 모델과 유사한 역할
-    # 
+    #
     # 주요 필드:
     # - id: 기본 키
     # - user_id: 외래 키 (users 테이블 참조)
@@ -36,10 +45,13 @@ class Project(Base):
     # - created_at, updated_at: 타임스탬프
     # - deleted_at: 소프트 삭제
     """
+
     __tablename__ = "projects"  # Laravel의 protected $table = 'projects'
 
     id = Column(Integer, primary_key=True, index=True)  # 기본 키
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)  # 외래 키
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )  # 외래 키
     host_name = Column(String(50))  # 호스트 이름
     ip_address = Column(String(45))  # IPv6 대응
     url = Column(String(255))  # 모니터링 URL
@@ -60,8 +72,21 @@ class Project(Base):
 
     # 관계 설정 (Laravel의 belongsTo와 유사)
     user = relationship("User", back_populates="projects", lazy="joined")
-    monitoring_logs = relationship("MonitoringLog", back_populates="project", cascade="all, delete-orphan")
-    project_logs = relationship("ProjectLog", back_populates="project", cascade="all, delete-orphan")
-    monitoring_alerts = relationship("MonitoringAlert", back_populates="project", cascade="all, delete-orphan")
-    monitoring_settings = relationship("MonitoringSetting", back_populates="project", cascade="all, delete-orphan", uselist=False)
-    notifications = relationship("Notification", back_populates="project", cascade="all, delete-orphan")
+    monitoring_logs = relationship(
+        "MonitoringLog", back_populates="project", cascade="all, delete-orphan"
+    )
+    project_logs = relationship(
+        "ProjectLog", back_populates="project", cascade="all, delete-orphan"
+    )
+    monitoring_alerts = relationship(
+        "MonitoringAlert", back_populates="project", cascade="all, delete-orphan"
+    )
+    monitoring_settings = relationship(
+        "MonitoringSetting",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    notifications = relationship(
+        "Notification", back_populates="project", cascade="all, delete-orphan"
+    )

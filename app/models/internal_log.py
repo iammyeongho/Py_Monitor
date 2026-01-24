@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
 from app.db.base_class import Base
 
+
 class InternalLog(Base):
     __tablename__ = "internal_logs"
 

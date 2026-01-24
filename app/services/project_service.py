@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 프로젝트 관련 비즈니스 로직을 구현합니다.
 # Laravel의 ProjectService와 유사한 역할을 합니다.
-# 
+#
 # 주요 기능:
 # 1. 프로젝트 CRUD
 # 2. 프로젝트 상태 관리
@@ -17,6 +17,7 @@ from app.models.project import Project
 from app.models.monitoring import MonitoringSetting
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
+
 class ProjectService:
     def __init__(self, db: Session):
         self.db = db
@@ -29,7 +30,7 @@ class ProjectService:
             url=project.url,
             host_name=project.host_name,
             ip_address=project.ip_address,
-            is_active=True
+            is_active=True,
         )
         self.db.add(db_project)
         self.db.commit()
@@ -41,7 +42,7 @@ class ProjectService:
             check_interval=300,  # 5분
             timeout=30,
             retry_count=3,
-            alert_threshold=3
+            alert_threshold=3,
         )
         self.db.add(monitoring_setting)
         self.db.commit()
@@ -50,30 +51,27 @@ class ProjectService:
 
     def get_project(self, project_id: int, user_id: int) -> Optional[Project]:
         """프로젝트 조회"""
-        return self.db.query(Project).filter(
-            Project.id == project_id,
-            Project.user_id == user_id
-        ).first()
+        return (
+            self.db.query(Project)
+            .filter(Project.id == project_id, Project.user_id == user_id)
+            .first()
+        )
 
     def get_user_projects(
-        self,
-        user_id: int,
-        skip: int = 0,
-        limit: int = 100
+        self, user_id: int, skip: int = 0, limit: int = 100
     ) -> List[Project]:
         """사용자의 프로젝트 목록 조회"""
-        return self.db.query(Project)\
-            .filter(Project.user_id == user_id)\
-            .order_by(Project.created_at.desc())\
-            .offset(skip)\
-            .limit(limit)\
+        return (
+            self.db.query(Project)
+            .filter(Project.user_id == user_id)
+            .order_by(Project.created_at.desc())
+            .offset(skip)
+            .limit(limit)
             .all()
+        )
 
     def update_project(
-        self,
-        project_id: int,
-        user_id: int,
-        project: ProjectUpdate
+        self, project_id: int, user_id: int, project: ProjectUpdate
     ) -> Optional[Project]:
         """프로젝트 업데이트"""
         db_project = self.get_project(project_id, user_id)
@@ -82,7 +80,7 @@ class ProjectService:
 
         for key, value in project.dict(exclude_unset=True).items():
             setattr(db_project, key, value)
-        
+
         db_project.updated_at = datetime.utcnow()
         self.db.commit()
         self.db.refresh(db_project)

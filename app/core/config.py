@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 애플리케이션 설정을 관리합니다.
 # Laravel의 config 디렉토리와 유사한 역할을 합니다.
-# 
+#
 # 주요 기능:
 # 1. 환경 변수 로드
 # 2. 데이터베이스 설정
@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 # .env 파일 로드
 load_dotenv()
+
 
 class Settings(BaseSettings):
     # 프로젝트 설정
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str  # JWT 토큰 서명에 사용되는 비밀 키
     ALGORITHM: str = "HS256"  # JWT 토큰 서명 알고리즘
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    
+
     # 이메일 설정
     # SMTP 서버 설정
     SMTP_HOST: str  # SMTP 서버 호스트
@@ -51,27 +52,36 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True  # TLS 사용 여부
     SMTP_USERNAME: str  # 발신자 이름
     SMTP_FROM: str  # 발신자 이메일 주소
-    
+
     # 모니터링 설정
     # 웹사이트 모니터링 관련 기본 설정
-    DEFAULT_CHECK_INTERVAL: int = int(os.getenv("DEFAULT_CHECK_INTERVAL", "300"))  # 기본 체크 간격 (초)
+    DEFAULT_CHECK_INTERVAL: int = int(
+        os.getenv("DEFAULT_CHECK_INTERVAL", "300")
+    )  # 기본 체크 간격 (초)
     DEFAULT_TIMEOUT: int = int(os.getenv("DEFAULT_TIMEOUT", "30"))  # 기본 타임아웃 (초)
 
     # 로깅 설정
     # 로그 관련 설정
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")  # 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    LOG_LEVEL: str = os.getenv(
+        "LOG_LEVEL", "INFO"
+    )  # 로그 레벨 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     LOG_DIR: str = os.getenv("LOG_DIR", "logs")  # 로그 디렉토리
-    LOG_MAX_BYTES: int = int(os.getenv("LOG_MAX_BYTES", "10485760"))  # 로그 파일 최대 크기 (10MB)
-    LOG_BACKUP_COUNT: int = int(os.getenv("LOG_BACKUP_COUNT", "5"))  # 로그 파일 백업 개수
-    LOG_FORMAT: str = os.getenv("LOG_FORMAT", "%(asctime)s [%(levelname)s] %(name)s: %(message)s")  # 로그 포맷
-    LOG_DATE_FORMAT: str = os.getenv("LOG_DATE_FORMAT", "%Y-%m-%d %H:%M:%S")  # 로그 날짜 포맷
+    LOG_MAX_BYTES: int = int(
+        os.getenv("LOG_MAX_BYTES", "10485760")
+    )  # 로그 파일 최대 크기 (10MB)
+    LOG_BACKUP_COUNT: int = int(
+        os.getenv("LOG_BACKUP_COUNT", "5")
+    )  # 로그 파일 백업 개수
+    LOG_FORMAT: str = os.getenv(
+        "LOG_FORMAT", "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )  # 로그 포맷
+    LOG_DATE_FORMAT: str = os.getenv(
+        "LOG_DATE_FORMAT", "%Y-%m-%d %H:%M:%S"
+    )  # 로그 날짜 포맷
 
     API_V1_STR: str = "/api/v1"
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -80,5 +90,6 @@ class Settings(BaseSettings):
             f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
+
 
 settings = Settings()

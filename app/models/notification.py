@@ -2,12 +2,23 @@
 알림 모델 정의
 """
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Text, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    func,
+)
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
+
 class Notification(Base):
     """알림 모델"""
+
     __tablename__ = "notifications"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -20,4 +31,4 @@ class Notification(Base):
     read_at = Column(DateTime(timezone=True), nullable=True)
 
     # 관계 설정
-    project = relationship("Project", back_populates="notifications") 
+    project = relationship("Project", back_populates="notifications")

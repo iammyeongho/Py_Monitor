@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 Laravel의 Monitoring 모델과 유사한 역할을 합니다.
 # Pydantic을 사용하여 모니터링 관련 스키마를 정의합니다.
-# 
+#
 # Laravel과의 주요 차이점:
 # 1. BaseModel = Laravel의 Model과 유사
 # 2. Field = Laravel의 $fillable과 유사
@@ -12,7 +12,7 @@
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
-from enum import Enum
+
 
 # 모니터링 로그 스키마
 class MonitoringLogBase(BaseModel):
@@ -22,8 +22,10 @@ class MonitoringLogBase(BaseModel):
     http_code: Optional[int] = None
     error_message: Optional[str] = None
 
+
 class MonitoringLogCreate(MonitoringLogBase):
     pass
+
 
 class MonitoringLogResponse(MonitoringLogBase):
     id: int
@@ -32,6 +34,7 @@ class MonitoringLogResponse(MonitoringLogBase):
     class Config:
         from_attributes = True
 
+
 # 모니터링 알림 스키마
 class MonitoringAlertBase(BaseModel):
     project_id: int
@@ -39,8 +42,10 @@ class MonitoringAlertBase(BaseModel):
     message: str
     status: str = "pending"
 
+
 class MonitoringAlertCreate(MonitoringAlertBase):
     pass
+
 
 class MonitoringAlertResponse(MonitoringAlertBase):
     id: int
@@ -50,6 +55,7 @@ class MonitoringAlertResponse(MonitoringAlertBase):
     class Config:
         from_attributes = True
 
+
 # 모니터링 설정 스키마
 class MonitoringSettingBase(BaseModel):
     project_id: int
@@ -58,14 +64,17 @@ class MonitoringSettingBase(BaseModel):
     retry_count: int = Field(default=3, ge=1, le=5)
     alert_threshold: int = Field(default=3, ge=1, le=10)
 
+
 class MonitoringSettingCreate(MonitoringSettingBase):
     pass
+
 
 class MonitoringSettingUpdate(BaseModel):
     check_interval: Optional[int] = Field(None, ge=60, le=3600)
     timeout: Optional[int] = Field(None, ge=5, le=300)
     retry_count: Optional[int] = Field(None, ge=1, le=5)
     alert_threshold: Optional[int] = Field(None, ge=1, le=10)
+
 
 class MonitoringSettingResponse(MonitoringSettingBase):
     id: int
@@ -75,6 +84,7 @@ class MonitoringSettingResponse(MonitoringSettingBase):
     class Config:
         from_attributes = True
 
+
 # SSL 도메인 상태 스키마
 class SSLDomainStatusBase(BaseModel):
     project_id: int
@@ -83,8 +93,10 @@ class SSLDomainStatusBase(BaseModel):
     ssl_expiry: Optional[datetime] = None
     domain_expiry: Optional[datetime] = None
 
+
 class SSLDomainStatusCreate(SSLDomainStatusBase):
     pass
+
 
 class SSLDomainStatusResponse(SSLDomainStatusBase):
     id: int
@@ -94,6 +106,7 @@ class SSLDomainStatusResponse(SSLDomainStatusBase):
     class Config:
         from_attributes = True
 
+
 # 모니터링 체크 요청 스키마
 class MonitoringCheckRequest(BaseModel):
     project_id: int
@@ -102,6 +115,7 @@ class MonitoringCheckRequest(BaseModel):
     headers: Optional[dict] = None
     body: Optional[dict] = None
     timeout: Optional[int] = 30
+
 
 # 모니터링 체크 응답 스키마
 class MonitoringCheckResponse(BaseModel):
@@ -113,26 +127,32 @@ class MonitoringCheckResponse(BaseModel):
     error_message: Optional[str] = None
     checked_at: datetime
 
+
 # SSL 상태 스키마
 class SSLStatus(BaseModel):
     """SSL 상태 스키마"""
+
     is_valid: bool
     issuer: Optional[str] = None
     valid_from: Optional[datetime] = None
     valid_until: Optional[datetime] = None
     days_remaining: Optional[int] = None
 
+
 # 모니터링 상태 스키마
 class MonitoringStatus(BaseModel):
     """모니터링 상태 스키마"""
+
     is_up: bool
     response_time: Optional[float] = None
     status_code: Optional[int] = None
     error_message: Optional[str] = None
 
+
 # 모니터링 응답 스키마
 class MonitoringResponse(BaseModel):
     """모니터링 응답 스키마"""
+
     project_id: int
     project_title: str
     url: str
