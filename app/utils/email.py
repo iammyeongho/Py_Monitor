@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 이메일 발송 기능을 구현합니다.
 # Laravel의 Mail 클래스와 유사한 역할을 합니다.
-# 
+#
 # 주요 기능:
 # 1. 이메일 발송
 # 2. HTML 템플릿 지원
@@ -16,17 +16,18 @@ from app.core.config import settings
 from app.models.email_log import EmailLog
 from sqlalchemy.orm import Session
 
+
 async def send_email_alert(
     email_to: str,
     subject: str,
     body: str,
     db: Session = None,
     project_id: int = None,
-    user_id: int = None
+    user_id: int = None,
 ) -> bool:
     """
     모니터링 알림 이메일 발송
-    
+
     Args:
         email_to: 수신자 이메일
         subject: 이메일 제목
@@ -34,7 +35,7 @@ async def send_email_alert(
         db: 데이터베이스 세션
         project_id: 프로젝트 ID
         user_id: 사용자 ID
-    
+
     Returns:
         bool: 발송 성공 여부
     """
@@ -52,14 +53,14 @@ async def send_email_alert(
                 <style>
                     body {{ font-family: Arial, sans-serif; }}
                     .container {{ padding: 20px; }}
-                    .alert {{ 
+                    .alert {{
                         background-color: #f8d7da;
                         border: 1px solid #f5c6cb;
                         border-radius: 4px;
                         padding: 15px;
                         margin-bottom: 20px;
                     }}
-                    .footer {{ 
+                    .footer {{
                         color: #6c757d;
                         font-size: 12px;
                         margin-top: 20px;
@@ -85,7 +86,7 @@ async def send_email_alert(
         async with aiosmtplib.SMTP(
             hostname=settings.SMTP_HOST,
             port=settings.SMTP_PORT,
-            use_tls=settings.SMTP_TLS
+            use_tls=settings.SMTP_TLS,
         ) as smtp:
             await smtp.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
             await smtp.send_message(message)
@@ -97,7 +98,7 @@ async def send_email_alert(
                 project_id=project_id,
                 email=email_to,
                 status=True,
-                body=body
+                body=body,
             )
             db.add(email_log)
             db.commit()
@@ -113,7 +114,7 @@ async def send_email_alert(
                 email=email_to,
                 status=False,
                 body=body,
-                error_message=str(e)
+                error_message=str(e),
             )
             db.add(email_log)
             db.commit()
