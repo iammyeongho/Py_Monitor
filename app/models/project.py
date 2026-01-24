@@ -91,3 +91,9 @@ class Project(Base):
     notifications = relationship(
         "Notification", back_populates="project", cascade="all, delete-orphan"
     )
+    request_logs = relationship(
+        "RequestLog", back_populates="project", cascade="all, delete-orphan"
+    )
+    ssl_domain_status = relationship(
+        "SSLDomainStatus", back_populates="project", cascade="all, delete-orphan"
+    )

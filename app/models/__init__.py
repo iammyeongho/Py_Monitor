@@ -1,5 +1,5 @@
 from app.db.base_class import Base
-from app.models.email import EmailLog
+from app.models.email_log import EmailLog
 from app.models.internal_log import InternalLog
 from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSetting
 from app.models.notification import Notification
