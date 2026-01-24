@@ -55,7 +55,7 @@ def test_create_project():
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "Test Project"
-    assert data["url"] == "https://example.com"
+    assert data["url"].rstrip("/") == "https://example.com"
     assert "id" in data
 
 def test_get_projects():

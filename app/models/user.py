@@ -32,7 +32,7 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     email_notifications = Column(Boolean, default=True)  # 이메일 알림 설정
     last_login_at = Column(DateTime(timezone=True), nullable=True)  # 마지막 로그인 시간
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # 관계 설정 (Laravel의 hasMany와 유사)

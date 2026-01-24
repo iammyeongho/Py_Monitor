@@ -60,7 +60,7 @@ class MonitoringScheduler:
 
         logger.info(f"Starting monitoring for project {project_id}")
         self.tasks[project_id] = asyncio.create_task(
-            self._monitor_project(project_id, project.check_interval)
+            self._monitor_project(project_id, project.status_interval or 300)
         )
 
     async def stop_monitoring(self, project_id: int):

@@ -42,7 +42,7 @@ class Notification(Base):
     is_read = Column(Boolean, default=False)
     is_sent = Column(Boolean, default=False)  # 발송 여부
     sent_at = Column(DateTime(timezone=True), nullable=True)  # 발송 시간
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     read_at = Column(DateTime(timezone=True), nullable=True)
 
     # 관계 설정

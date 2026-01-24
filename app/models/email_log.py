@@ -31,7 +31,7 @@ class EmailLog(Base):
     body = Column(Text, nullable=False)
     is_sent = Column(Boolean, default=False)
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     sent_at = Column(DateTime(timezone=True), nullable=True)
 
     # 관계 설정 (Laravel의 belongsTo와 유사)

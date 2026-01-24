@@ -68,7 +68,7 @@ class Project(Base):
     expiry_interval = Column(Integer, default=7)  # 만료일 알림 주기 (일)
     time_limit = Column(Integer, default=5)  # 응답 시간 제한 (초)
     time_limit_interval = Column(Integer, default=15)  # 제한 초과 시 알림 주기 (분)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())  # 생성 시간
+    created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())  # 생성 시간
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())  # 수정 시간
     deleted_at = Column(DateTime, nullable=True)  # 삭제 시간
 
