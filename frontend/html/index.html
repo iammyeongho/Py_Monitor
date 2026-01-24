@@ -8,211 +8,778 @@
   <link rel="stylesheet" href="/frontend/style/style.css">
 </head>
 <body>
-  <div class="header">
-    <h2>모니터링 대시보드</h2>
-    <a href="project.html"><button class="btn btn-primary">+ 프로젝트 등록</button></a>
-  </div>
-  <div class="dashboard" id="dashboard">
-    <!-- JS로 프로젝트 카드가 렌더링됩니다. -->
-  </div>
+  <!-- 헤더 -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">PyMonitor</a>
+      <nav class="nav">
+        <a href="index.html" class="nav-link active">대시보드</a>
+        <a href="project.html" class="nav-link">프로젝트 등록</a>
+        <a href="tools.html" class="nav-link">도구</a>
+      </nav>
+      <div class="user-actions">
+        <span class="user-name" id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">로그아웃</button>
+      </div>
+    </div>
+  </header>
 
-  <!-- 모니터링 주기 설정 팝업 -->
+  <!-- 메인 컨텐츠 -->
+  <main class="main-content">
+    <div class="container">
+      <!-- 페이지 타이틀 -->
+      <div class="page-header">
+        <h1 class="page-title">모니터링 대시보드</h1>
+        <a href="project.html" class="btn btn-primary">
+          <span>+</span> 프로젝트 등록
+        </a>
+      </div>
+
+      <!-- 통계 카드 -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">전체 프로젝트</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">정상 운영</div>
+          <div class="stat-value stat-success" id="stat-online">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">오류 발생</div>
+          <div class="stat-value stat-error" id="stat-offline">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">평균 응답시간</div>
+          <div class="stat-value" id="stat-response">-</div>
+        </div>
+      </div>
+
+      <!-- 프로젝트 그리드 -->
+      <div class="section-header">
+        <h2 class="section-title">내 프로젝트</h2>
+      </div>
+
+      <div class="projects-grid" id="projects-grid">
+        <!-- 로딩 상태 -->
+        <div class="loading" id="loading">
+          <div class="loading-spinner"></div>
+          <p>프로젝트를 불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- 빈 상태 (프로젝트 없을 때) -->
+      <div class="empty-state" id="empty-state" style="display: none;">
+        <div class="empty-icon">📊</div>
+        <h3 class="empty-title">등록된 프로젝트가 없습니다</h3>
+        <p class="empty-description">새 프로젝트를 등록하고 웹사이트 모니터링을 시작하세요.</p>
+        <a href="project.html" class="btn btn-primary">프로젝트 등록하기</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- 설정 모달 -->
   <div class="modal" id="setting-modal">
     <div class="modal-content">
-      <h3>모니터링 주기 설정</h3>
-      <form id="setting-form">
-        <div class="form-group">
-          <label for="check-interval">체크 주기(초)</label>
-          <input type="number" id="check-interval" min="10" required>
-        </div>
-        <div class="form-group">
-          <label for="timeout">타임아웃(초)</label>
-          <input type="number" id="timeout" min="1" required>
-        </div>
-        <div class="form-group">
-          <label for="retry-count">재시도 횟수</label>
-          <input type="number" id="retry-count" min="0" required>
-        </div>
-        <div class="form-group">
-          <label for="alert-threshold">알림 임계값</label>
-          <input type="number" id="alert-threshold" min="1" required>
-        </div>
-        <button type="submit" class="btn btn-primary">저장</button>
-        <button type="button" id="close-modal" class="btn btn-secondary">닫기</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- 상세 정보 팝업 -->
-  <div id="detail-modal" class="modal">
-    <div class="modal-content">
-      <h2 id="detail-title"></h2>
-      
-      <!-- 기본 정보 -->
-      <div class="detail-section">
-        <div class="detail-label">URL</div>
-        <div class="detail-value" id="detail-url"></div>
+      <div class="modal-header">
+        <h3 class="modal-title">모니터링 설정</h3>
+        <button type="button" class="modal-close" id="close-setting-modal">&times;</button>
       </div>
-
-      <!-- SSL 정보 -->
-      <div class="detail-section">
-        <div class="detail-label">SSL 상태</div>
-        <div class="detail-value" id="detail-ssl-status"></div>
-        <div class="detail-label">SSL 만료일</div>
-        <div class="detail-value" id="detail-ssl-expiry"></div>
-      </div>
-
-      <!-- 도메인 정보 -->
-      <div class="detail-section">
-        <div class="detail-label">도메인 만료일</div>
-        <div class="detail-value" id="detail-domain-expiry"></div>
-      </div>
-
-      <!-- JS 매트릭 -->
-      <div class="detail-section">
-        <div class="detail-label">JS 매트릭 점수</div>
-        <div class="detail-value" id="detail-js-metrics"></div>
-      </div>
-
-      <!-- 모니터링 설정 -->
-      <div class="detail-section">
-        <div class="detail-label">모니터링 설정</div>
-        <form id="detail-setting-form" class="setting-form">
-          <!-- 기본 모니터링 설정 -->
-          <div class="setting-group">
-            <h4>기본 설정</h4>
-            <div class="form-group">
-              <label for="detail-check-interval">체크 주기 (초)</label>
-              <input type="number" id="detail-check-interval" min="10" required>
-            </div>
-            <div class="form-group">
-              <label for="detail-timeout">타임아웃 (초)</label>
-              <input type="number" id="detail-timeout" min="1" required>
-            </div>
-            <div class="form-group">
-              <label for="detail-retry-count">재시도 횟수</label>
-              <input type="number" id="detail-retry-count" min="0" required>
-            </div>
+      <div class="modal-body">
+        <form id="setting-form">
+          <div class="form-group">
+            <label class="form-label" for="check-interval">체크 주기 (초)</label>
+            <input type="number" class="form-input" id="check-interval" min="10" value="300" required>
+            <span class="form-hint">최소 10초 이상</span>
           </div>
-
-          <!-- 응답 속도 설정 -->
-          <div class="setting-group">
-            <h4>응답 속도 설정</h4>
-            <div class="form-group">
-              <label for="detail-response-limit">응답 속도 제한 (초)</label>
-              <input type="number" id="detail-response-limit" min="1" required>
-            </div>
-            <div class="form-group">
-              <label for="detail-response-alert-interval">제한 초과 시 알림 주기 (분)</label>
-              <input type="number" id="detail-response-alert-interval" min="1" required>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="timeout">타임아웃 (초)</label>
+            <input type="number" class="form-input" id="timeout" min="1" value="30" required>
           </div>
-
-          <!-- 알림 설정 -->
-          <div class="setting-group">
-            <h4>알림 설정</h4>
-            <div class="form-group">
-              <label for="detail-error-alert-interval">HTTP 오류 알림 주기 (분)</label>
-              <input type="number" id="detail-error-alert-interval" min="1" required>
-            </div>
-            <div class="form-group">
-              <label for="detail-expiry-dday">만료일 D-day 알림</label>
-              <input type="number" id="detail-expiry-dday" min="1" required>
-            </div>
-            <div class="form-group">
-              <label for="detail-expiry-alert-interval">만료일 알림 주기 (일)</label>
-              <input type="number" id="detail-expiry-alert-interval" min="1" required>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="retry-count">재시도 횟수</label>
+            <input type="number" class="form-input" id="retry-count" min="0" value="3" required>
           </div>
-
-          <button type="submit" class="btn btn-primary">설정 저장</button>
+          <div class="form-group">
+            <label class="form-label" for="alert-threshold">알림 임계값</label>
+            <input type="number" class="form-input" id="alert-threshold" min="1" value="3" required>
+            <span class="form-hint">연속 실패 횟수</span>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancel-setting">취소</button>
+            <button type="submit" class="btn btn-primary">저장</button>
+          </div>
         </form>
       </div>
-
-      <button type="button" id="close-detail-modal" class="btn btn-secondary">닫기</button>
     </div>
   </div>
+
+  <!-- 상세 정보 모달 -->
+  <div class="modal" id="detail-modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detail-title">프로젝트 상세</h3>
+        <button type="button" class="modal-close" id="close-detail-modal">&times;</button>
+      </div>
+
+      <!-- 모달 탭 -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="detail-info">정보</button>
+        <button class="modal-tab" data-tab="detail-history">히스토리</button>
+        <button class="modal-tab" data-tab="detail-settings">설정</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- 정보 탭 -->
+        <div class="modal-tab-content active" id="tab-detail-info">
+        <!-- 기본 정보 -->
+        <div class="detail-section">
+          <h4 class="detail-section-title">기본 정보</h4>
+          <div class="detail-row">
+            <span class="detail-label">URL</span>
+            <span class="detail-value" id="detail-url">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">상태</span>
+            <span class="detail-value" id="detail-status">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">응답 시간</span>
+            <span class="detail-value" id="detail-response-time">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">마지막 체크</span>
+            <span class="detail-value" id="detail-last-check">-</span>
+          </div>
+        </div>
+
+        <!-- SSL 정보 -->
+        <div class="detail-section">
+          <h4 class="detail-section-title">SSL 인증서</h4>
+          <div class="detail-row">
+            <span class="detail-label">SSL 상태</span>
+            <span class="detail-value" id="detail-ssl-status">-</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">만료일</span>
+            <span class="detail-value" id="detail-ssl-expiry">-</span>
+          </div>
+        </div>
+
+        <!-- 도메인 정보 -->
+        <div class="detail-section">
+          <h4 class="detail-section-title">도메인</h4>
+          <div class="detail-row">
+            <span class="detail-label">도메인 만료일</span>
+            <span class="detail-value" id="detail-domain-expiry">-</span>
+          </div>
+        </div>
+        </div><!-- end tab-detail-info -->
+
+        <!-- 히스토리 탭 -->
+        <div class="modal-tab-content" id="tab-detail-history">
+          <div class="detail-section">
+            <h4 class="detail-section-title">모니터링 히스토리</h4>
+            <div class="history-list" id="history-list">
+              <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>로딩 중...</p>
+              </div>
+            </div>
+          </div>
+        </div><!-- end tab-detail-history -->
+
+        <!-- 설정 탭 -->
+        <div class="modal-tab-content" id="tab-detail-settings">
+        <!-- 모니터링 설정 -->
+        <div class="detail-section">
+          <h4 class="detail-section-title">모니터링 설정</h4>
+          <form id="detail-setting-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="detail-check-interval">체크 주기 (초)</label>
+                <input type="number" class="form-input" id="detail-check-interval" min="10" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="detail-timeout">타임아웃 (초)</label>
+                <input type="number" class="form-input" id="detail-timeout" min="1" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="detail-retry-count">재시도 횟수</label>
+                <input type="number" class="form-input" id="detail-retry-count" min="0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="detail-alert-threshold">알림 임계값</label>
+                <input type="number" class="form-input" id="detail-alert-threshold" min="1" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="detail-response-limit">응답 속도 제한 (초)</label>
+                <input type="number" class="form-input" id="detail-response-limit" min="1" value="5">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="detail-expiry-dday">만료일 알림 (D-day)</label>
+                <input type="number" class="form-input" id="detail-expiry-dday" min="1" value="30">
+              </div>
+            </div>
+
+            <!-- 알림 설정 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">알림 설정</h5>
+
+            <div class="form-group">
+              <label class="form-label form-checkbox">
+                <input type="checkbox" id="detail-alert-enabled" checked>
+                <span>알림 활성화</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="detail-alert-email">알림 이메일</label>
+              <input type="email" class="form-input" id="detail-alert-email" placeholder="alert@example.com">
+              <span class="form-hint">장애 발생 시 알림을 받을 이메일</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="detail-webhook-url">웹훅 URL</label>
+              <input type="url" class="form-input" id="detail-webhook-url" placeholder="https://hooks.slack.com/...">
+              <span class="form-hint">Slack, Discord 등 웹훅 URL</span>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" id="delete-project-btn">프로젝트 삭제</button>
+              <button type="submit" class="btn btn-primary">설정 저장</button>
+            </div>
+          </form>
+        </div>
+        </div><!-- end tab-detail-settings -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 토스트 알림 컨테이너 -->
+  <div class="toast-container" id="toast-container"></div>
 
   <!-- JavaScript -->
   <script src="/frontend/js/auth.js"></script>
   <script src="/frontend/js/project.js"></script>
   <script src="/frontend/js/monitoring.js"></script>
   <script>
-      // 페이지 로드 시 인증 확인
-      document.addEventListener('DOMContentLoaded', () => {
-          if (!auth.checkAuth()) return;
-          
-          // 프로젝트 목록 로드
-          loadProjects();
-      });
-      
+    // 전역 상태
+    let currentProjectId = null;
+    let projects = [];
+
+    // 페이지 로드 시 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!auth.checkAuth()) return;
+
+      // 사용자 정보 표시
+      displayUserInfo();
+
       // 프로젝트 목록 로드
-      async function loadProjects() {
-          try {
-              const projects = await project.getProjects();
-              const projectList = document.getElementById('projectList');
-              projectList.innerHTML = '';
-              
-              projects.forEach(project => {
-                  const projectElement = createProjectElement(project);
-                  projectList.appendChild(projectElement);
-              });
-          } catch (error) {
-              console.error('프로젝트 목록 로드 오류:', error);
-              alert('프로젝트 목록을 불러오는데 실패했습니다.');
+      loadProjects();
+
+      // 이벤트 리스너 설정
+      setupEventListeners();
+    });
+
+    // 사용자 정보 표시
+    function displayUserInfo() {
+      const user = auth.getUser();
+      if (user) {
+        document.getElementById('user-name').textContent = user.full_name || user.email;
+      }
+    }
+
+    // 이벤트 리스너 설정
+    function setupEventListeners() {
+      // 로그아웃
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        auth.logout();
+      });
+
+      // 설정 모달 닫기
+      document.getElementById('close-setting-modal').addEventListener('click', closeSettingModal);
+      document.getElementById('cancel-setting').addEventListener('click', closeSettingModal);
+
+      // 상세 모달 닫기
+      document.getElementById('close-detail-modal').addEventListener('click', closeDetailModal);
+
+      // 설정 폼 제출
+      document.getElementById('setting-form').addEventListener('submit', handleSettingSubmit);
+
+      // 상세 설정 폼 제출
+      document.getElementById('detail-setting-form').addEventListener('submit', handleDetailSettingSubmit);
+
+      // 프로젝트 삭제
+      document.getElementById('delete-project-btn').addEventListener('click', handleDeleteProject);
+
+      // 모달 외부 클릭 시 닫기
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('active');
           }
-      }
-      
-      // 프로젝트 요소 생성
-      function createProjectElement(project) {
-          const div = document.createElement('div');
-          div.className = 'project-item';
-          div.innerHTML = `
-              <h3>${project.title}</h3>
-              <p>URL: ${project.url}</p>
-              <p>상태: ${project.status ? '정상' : '오류'}</p>
-              <button onclick="viewProjectDetail(${project.id})">상세보기</button>
-          `;
-          return div;
-      }
-      
-      // 프로젝트 상세보기
-      async function viewProjectDetail(projectId) {
-          try {
-              const projectDetail = await project.getProjectDetail(projectId);
-              const monitoringStatus = await monitoring.getMonitoringStatus(projectId);
-              
-              // 상세 정보 표시
-              document.getElementById('projectDetail').style.display = 'block';
-              document.getElementById('projectTitle').textContent = projectDetail.title;
-              document.getElementById('projectUrl').textContent = projectDetail.url;
-              document.getElementById('projectStatus').textContent = 
-                  monitoringStatus.status ? '정상' : '오류';
-              
-              // 실시간 모니터링 시작
-              const ws = monitoring.startRealtimeMonitoring(projectId, (data) => {
-                  updateMonitoringStatus(data);
-              });
-              
-              // 페이지 이탈 시 WebSocket 연결 종료
-              window.addEventListener('beforeunload', () => {
-                  ws.close();
-              });
-          } catch (error) {
-              console.error('프로젝트 상세 정보 로드 오류:', error);
-              alert('프로젝트 상세 정보를 불러오는데 실패했습니다.');
+        });
+      });
+
+      // 상세 모달 탭 전환
+      document.querySelectorAll('.modal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabId = tab.dataset.tab;
+
+          // 탭 버튼 활성화
+          document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          // 탭 컨텐츠 활성화
+          document.querySelectorAll('.modal-tab-content').forEach(c => c.classList.remove('active'));
+          document.getElementById(`tab-${tabId}`).classList.add('active');
+
+          // 히스토리 탭 선택 시 로드
+          if (tabId === 'detail-history' && currentProjectId) {
+            loadMonitoringHistory(currentProjectId);
           }
+        });
+      });
+    }
+
+    // 프로젝트 목록 로드
+    async function loadProjects() {
+      const grid = document.getElementById('projects-grid');
+      const loading = document.getElementById('loading');
+      const emptyState = document.getElementById('empty-state');
+
+      try {
+        projects = await project.getProjects();
+
+        // 로딩 숨김
+        loading.style.display = 'none';
+
+        if (projects.length === 0) {
+          grid.style.display = 'none';
+          emptyState.style.display = 'flex';
+          updateStats(0, 0, 0, '-');
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        grid.style.display = 'grid';
+
+        // 프로젝트 카드 렌더링 (초기)
+        renderProjects(projects);
+
+        // 모니터링 상태 로드 후 업데이트
+        await loadMonitoringStatus();
+
+        // 통계 업데이트 (모니터링 데이터 포함)
+        updateStatsFromProjects(projects);
+
+      } catch (error) {
+        console.error('프로젝트 로드 오류:', error);
+        loading.innerHTML = '<p class="text-error">프로젝트를 불러오는데 실패했습니다.</p>';
+        showToast('프로젝트 목록을 불러오는데 실패했습니다.', 'error');
       }
-      
-      // 모니터링 상태 업데이트
-      function updateMonitoringStatus(data) {
-          document.getElementById('projectStatus').textContent = 
-              data.status ? '정상' : '오류';
-          document.getElementById('responseTime').textContent = 
-              data.response_time ? `${data.response_time}ms` : 'N/A';
-          document.getElementById('lastCheck').textContent = 
-              new Date(data.last_check).toLocaleString();
+    }
+
+    // 모니터링 상태 로드
+    async function loadMonitoringStatus() {
+      try {
+        const statuses = await monitoring.getAllProjectsStatus();
+
+        // 각 프로젝트에 모니터링 상태 데이터 추가
+        statuses.forEach(status => {
+          const proj = projects.find(p => p.id === status.project_id);
+          if (proj) {
+            proj.monitoringStatus = status;
+            proj.is_available = status.status?.is_available ?? null;
+            proj.response_time = status.status?.response_time;
+            proj.status_code = status.status?.status_code;
+            proj.error_message = status.status?.error_message;
+            proj.ssl_info = status.ssl;
+            proj.last_checked_at = status.checked_at;
+          }
+        });
+
+        // 모니터링 데이터로 카드 다시 렌더링
+        renderProjects(projects);
+
+      } catch (error) {
+        console.error('모니터링 상태 로드 오류:', error);
+        // 모니터링 상태 로드 실패해도 프로젝트 목록은 표시
       }
+    }
+
+    // 프로젝트 카드 렌더링
+    function renderProjects(projects) {
+      const grid = document.getElementById('projects-grid');
+      grid.innerHTML = projects.map(p => createProjectCard(p)).join('');
+    }
+
+    // 프로젝트 카드 생성
+    function createProjectCard(proj) {
+      // 모니터링 상태 결정 (is_available이 null이면 대기중)
+      let statusClass, statusText;
+      if (proj.is_available === null || proj.is_available === undefined) {
+        statusClass = 'status-pending';
+        statusText = '대기중';
+      } else if (proj.is_available === true) {
+        statusClass = 'status-online';
+        statusText = '정상';
+      } else {
+        statusClass = 'status-offline';
+        statusText = '오류';
+      }
+
+      const responseTime = proj.response_time ? `${Math.round(proj.response_time * 1000)}ms` : '-';
+      const statusCode = proj.status_code ? `HTTP ${proj.status_code}` : '';
+
+      // SSL 상태
+      let sslBadge = '';
+      if (proj.ssl_info) {
+        if (proj.ssl_info.is_valid) {
+          const daysRemaining = proj.ssl_info.days_remaining;
+          if (daysRemaining !== null && daysRemaining <= 30) {
+            sslBadge = `<span class="ssl-badge ssl-warning" title="SSL 만료 ${daysRemaining}일 전">SSL ${daysRemaining}일</span>`;
+          } else {
+            sslBadge = '<span class="ssl-badge ssl-valid" title="SSL 유효">SSL</span>';
+          }
+        } else {
+          sslBadge = '<span class="ssl-badge ssl-invalid" title="SSL 오류">SSL 오류</span>';
+        }
+      }
+
+      return `
+        <div class="project-card" data-id="${proj.id}">
+          <div class="project-card-header">
+            <div class="status-group">
+              <span class="project-status ${statusClass}">${statusText}</span>
+              ${sslBadge}
+            </div>
+            <button class="project-menu-btn" onclick="openSettingModal(${proj.id})">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="12" cy="5" r="1"></circle>
+                <circle cx="12" cy="19" r="1"></circle>
+              </svg>
+            </button>
+          </div>
+          <div class="project-card-body" onclick="openDetailModal(${proj.id})">
+            <h3 class="project-title">${escapeHtml(proj.title)}</h3>
+            <p class="project-url">${escapeHtml(proj.url)}</p>
+            ${proj.error_message ? `<p class="project-error">${escapeHtml(proj.error_message)}</p>` : ''}
+          </div>
+          <div class="project-card-footer">
+            <div class="project-stat">
+              <span class="project-stat-label">응답시간</span>
+              <span class="project-stat-value">${responseTime}</span>
+            </div>
+            <div class="project-stat">
+              <span class="project-stat-label">상태코드</span>
+              <span class="project-stat-value">${statusCode || '-'}</span>
+            </div>
+            <div class="project-stat">
+              <span class="project-stat-label">마지막 체크</span>
+              <span class="project-stat-value">${formatTime(proj.last_checked_at)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 통계 업데이트
+    function updateStats(total, online, offline, avgResponse) {
+      document.getElementById('stat-total').textContent = total;
+      document.getElementById('stat-online').textContent = online;
+      document.getElementById('stat-offline').textContent = offline;
+      document.getElementById('stat-response').textContent = avgResponse;
+    }
+
+    // 프로젝트 데이터로 통계 업데이트
+    function updateStatsFromProjects(projects) {
+      const total = projects.length;
+
+      // 모니터링 데이터 기반으로 상태 계산
+      const online = projects.filter(p => p.is_available === true).length;
+      const offline = projects.filter(p => p.is_available === false).length;
+      const pending = total - online - offline;
+
+      // 응답시간 계산 (초 단위를 ms로 변환)
+      const responseTimes = projects
+        .filter(p => p.response_time !== null && p.response_time !== undefined)
+        .map(p => p.response_time * 1000); // 초 -> ms
+
+      const avgResponse = responseTimes.length > 0
+        ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) + 'ms'
+        : '-';
+
+      updateStats(total, online, offline, avgResponse);
+    }
+
+    // 설정 모달 열기
+    function openSettingModal(projectId) {
+      currentProjectId = projectId;
+      document.getElementById('setting-modal').classList.add('active');
+    }
+
+    // 설정 모달 닫기
+    function closeSettingModal() {
+      document.getElementById('setting-modal').classList.remove('active');
+      currentProjectId = null;
+    }
+
+    // 상세 모달 열기
+    async function openDetailModal(projectId) {
+      currentProjectId = projectId;
+      const modal = document.getElementById('detail-modal');
+
+      try {
+        const proj = projects.find(p => p.id === projectId);
+        if (!proj) return;
+
+        // 기본 정보 설정
+        document.getElementById('detail-title').textContent = proj.title;
+        document.getElementById('detail-url').textContent = proj.url;
+
+        // 모니터링 상태 표시
+        let statusHtml;
+        if (proj.is_available === null || proj.is_available === undefined) {
+          statusHtml = '<span class="badge badge-pending">대기중</span>';
+        } else if (proj.is_available === true) {
+          statusHtml = '<span class="badge badge-success">정상</span>';
+        } else {
+          statusHtml = '<span class="badge badge-error">오류</span>';
+        }
+        if (proj.status_code) {
+          statusHtml += ` <span class="badge badge-info">HTTP ${proj.status_code}</span>`;
+        }
+        document.getElementById('detail-status').innerHTML = statusHtml;
+
+        // 응답시간 (초 -> ms 변환)
+        const responseTimeMs = proj.response_time ? `${Math.round(proj.response_time * 1000)}ms` : '-';
+        document.getElementById('detail-response-time').textContent = responseTimeMs;
+        document.getElementById('detail-last-check').textContent = formatDateTime(proj.last_checked_at);
+
+        // SSL 정보 (모니터링 데이터에서)
+        if (proj.ssl_info) {
+          const ssl = proj.ssl_info;
+          if (ssl.is_valid) {
+            document.getElementById('detail-ssl-status').innerHTML = '<span class="badge badge-success">유효</span>';
+            if (ssl.valid_until) {
+              document.getElementById('detail-ssl-expiry').textContent =
+                `${formatDate(ssl.valid_until)} (${ssl.days_remaining}일 남음)`;
+            }
+          } else {
+            document.getElementById('detail-ssl-status').innerHTML = '<span class="badge badge-error">오류</span>';
+            document.getElementById('detail-ssl-expiry').textContent = '-';
+          }
+        } else {
+          document.getElementById('detail-ssl-status').textContent = '-';
+          document.getElementById('detail-ssl-expiry').textContent = '-';
+        }
+
+        // 도메인 정보
+        document.getElementById('detail-domain-expiry').textContent = proj.domain_expiry_date ? formatDate(proj.domain_expiry_date) : '-';
+
+        // 모니터링 설정 로드
+        try {
+          const settings = await monitoring.getSettings(projectId);
+          document.getElementById('detail-check-interval').value = settings.check_interval || 300;
+          document.getElementById('detail-timeout').value = settings.timeout || 30;
+          document.getElementById('detail-retry-count').value = settings.retry_count || 3;
+          document.getElementById('detail-alert-threshold').value = settings.alert_threshold || 3;
+          document.getElementById('detail-response-limit').value = settings.response_time_limit || 5;
+          document.getElementById('detail-expiry-dday').value = settings.expiry_alert_days || 30;
+          // 알림 설정
+          document.getElementById('detail-alert-enabled').checked = settings.is_alert_enabled !== false;
+          document.getElementById('detail-alert-email').value = settings.alert_email || '';
+          document.getElementById('detail-webhook-url').value = settings.webhook_url || '';
+        } catch (settingsError) {
+          console.warn('모니터링 설정 로드 실패:', settingsError);
+          // 기본값 설정
+          document.getElementById('detail-check-interval').value = 300;
+          document.getElementById('detail-timeout').value = 30;
+          document.getElementById('detail-retry-count').value = 3;
+          document.getElementById('detail-alert-threshold').value = 3;
+          document.getElementById('detail-response-limit').value = 5;
+          document.getElementById('detail-expiry-dday').value = 30;
+          document.getElementById('detail-alert-enabled').checked = true;
+          document.getElementById('detail-alert-email').value = '';
+          document.getElementById('detail-webhook-url').value = '';
+        }
+
+        modal.classList.add('active');
+
+      } catch (error) {
+        console.error('상세 정보 로드 오류:', error);
+        showToast('상세 정보를 불러오는데 실패했습니다.', 'error');
+      }
+    }
+
+    // 상세 모달 닫기
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.remove('active');
+      currentProjectId = null;
+    }
+
+    // 설정 폼 제출
+    async function handleSettingSubmit(e) {
+      e.preventDefault();
+
+      const settings = {
+        check_interval: parseInt(document.getElementById('check-interval').value),
+        timeout: parseInt(document.getElementById('timeout').value),
+        retry_count: parseInt(document.getElementById('retry-count').value),
+        alert_threshold: parseInt(document.getElementById('alert-threshold').value)
+      };
+
+      try {
+        await monitoring.updateSettings(currentProjectId, settings);
+        showToast('설정이 저장되었습니다.', 'success');
+        closeSettingModal();
+        loadProjects();
+      } catch (error) {
+        console.error('설정 저장 오류:', error);
+        showToast('설정 저장에 실패했습니다.', 'error');
+      }
+    }
+
+    // 상세 설정 폼 제출
+    async function handleDetailSettingSubmit(e) {
+      e.preventDefault();
+
+      const alertEmail = document.getElementById('detail-alert-email').value.trim();
+      const webhookUrl = document.getElementById('detail-webhook-url').value.trim();
+
+      const settings = {
+        check_interval: parseInt(document.getElementById('detail-check-interval').value),
+        timeout: parseInt(document.getElementById('detail-timeout').value),
+        retry_count: parseInt(document.getElementById('detail-retry-count').value),
+        alert_threshold: parseInt(document.getElementById('detail-alert-threshold').value),
+        response_time_limit: parseInt(document.getElementById('detail-response-limit').value),
+        expiry_alert_days: parseInt(document.getElementById('detail-expiry-dday').value),
+        is_alert_enabled: document.getElementById('detail-alert-enabled').checked,
+        alert_email: alertEmail || null,
+        webhook_url: webhookUrl || null
+      };
+
+      try {
+        await monitoring.updateSettings(currentProjectId, settings);
+        showToast('설정이 저장되었습니다.', 'success');
+        closeDetailModal();
+        loadProjects();
+      } catch (error) {
+        console.error('설정 저장 오류:', error);
+        showToast('설정 저장에 실패했습니다.', 'error');
+      }
+    }
+
+    // 프로젝트 삭제
+    async function handleDeleteProject() {
+      if (!confirm('정말 이 프로젝트를 삭제하시겠습니까?')) return;
+
+      try {
+        await project.deleteProject(currentProjectId);
+        showToast('프로젝트가 삭제되었습니다.', 'success');
+        closeDetailModal();
+        loadProjects();
+      } catch (error) {
+        console.error('프로젝트 삭제 오류:', error);
+        showToast('프로젝트 삭제에 실패했습니다.', 'error');
+      }
+    }
+
+    // 모니터링 히스토리 로드
+    async function loadMonitoringHistory(projectId) {
+      const historyList = document.getElementById('history-list');
+      historyList.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>로딩 중...</p>
+        </div>
+      `;
+
+      try {
+        const logs = await monitoring.getLogs(projectId, 0, 50);
+
+        if (logs.length === 0) {
+          historyList.innerHTML = '<p class="empty-message">모니터링 기록이 없습니다.</p>';
+          return;
+        }
+
+        historyList.innerHTML = logs.map(log => `
+          <div class="history-item ${log.is_available ? 'history-success' : 'history-error'}">
+            <div class="history-status">
+              <span class="history-icon">${log.is_available ? '✓' : '✗'}</span>
+              <span class="history-time">${formatDateTime(log.created_at)}</span>
+            </div>
+            <div class="history-details">
+              ${log.status_code ? `<span class="history-code">HTTP ${log.status_code}</span>` : ''}
+              ${log.response_time ? `<span class="history-response">${Math.round(log.response_time * 1000)}ms</span>` : ''}
+              ${log.error_message ? `<span class="history-error-msg">${escapeHtml(log.error_message)}</span>` : ''}
+            </div>
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.error('히스토리 로드 오류:', error);
+        historyList.innerHTML = '<p class="error-message">히스토리를 불러오는데 실패했습니다.</p>';
+      }
+    }
+
+    // 토스트 알림 표시
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+
+      container.appendChild(toast);
+
+      // 애니메이션을 위한 딜레이
+      setTimeout(() => toast.classList.add('show'), 10);
+
+      // 3초 후 제거
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // 유틸리티 함수들
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTime(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return '방금 전';
+      if (diff < 3600000) return `${Math.floor(diff / 60000)}분 전`;
+      if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
+      return `${Math.floor(diff / 86400000)}일 전`;
+    }
+
+    function formatDateTime(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleString('ko-KR');
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ko-KR');
+    }
   </script>
 </body>
 </html>
