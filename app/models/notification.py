@@ -1,5 +1,15 @@
 """
-알림 모델 정의
+알림(Notification) 모델
+
+이 파일은 알림 정보를 저장하는 모델을 정의합니다.
+Laravel의 Notification 모델과 유사한 역할을 합니다.
+
+주요 필드:
+- project_id: 연관된 프로젝트
+- type: 알림 유형 (email, webhook 등)
+- recipient: 수신자 (이메일 주소 또는 웹훅 URL)
+- message: 알림 내용
+- is_read: 읽음 여부
 """
 
 from sqlalchemy import (
