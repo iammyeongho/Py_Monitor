@@ -9,9 +9,11 @@
 # 3. 알림 템플릿 관리
 """
 
-import aiohttp
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
+
+import aiohttp
+
 from app.utils.email import send_email_alert
 
 logger = logging.getLogger(__name__)

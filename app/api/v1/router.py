@@ -12,7 +12,8 @@ Laravel의 routes/api.php와 유사한 역할을 합니다.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, projects, monitoring, notifications
+
+from app.api.v1.endpoints import monitoring, notifications, projects, users
 
 # API v1 라우터 생성
 # 이 라우터는 main.py에서 /api/v1 prefix로 등록됩니다

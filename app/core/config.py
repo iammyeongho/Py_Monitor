@@ -12,10 +12,11 @@
 # 6. 로깅 설정
 """
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, List
 import os
+from typing import List, Optional
+
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .env 파일 로드
 load_dotenv()

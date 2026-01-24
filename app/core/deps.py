@@ -12,10 +12,12 @@ Laravel의 Service Container와 유사한 역할을 합니다.
 """
 
 from typing import Generator
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.user import User

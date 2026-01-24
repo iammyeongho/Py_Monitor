@@ -9,12 +9,13 @@
 # 3. 프로젝트 설정 관리
 """
 
-from typing import List, Optional
-from sqlalchemy.orm import Session
 from datetime import datetime
+from typing import List, Optional
 
-from app.models.project import Project
+from sqlalchemy.orm import Session
+
 from app.models.monitoring import MonitoringSetting
+from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
 
 

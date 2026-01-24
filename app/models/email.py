@@ -10,16 +10,17 @@
 """
 
 from sqlalchemy import (
-    Column,
-    Integer,
-    String,
     Boolean,
-    Text,
+    Column,
     DateTime,
     ForeignKey,
+    Integer,
+    String,
+    Text,
     func,
 )
 from sqlalchemy.orm import relationship
+
 from app.db.session import Base
 
 

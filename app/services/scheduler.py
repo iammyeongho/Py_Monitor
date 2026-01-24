@@ -13,9 +13,11 @@
 import asyncio
 import logging
 from typing import Dict
+
 from sqlalchemy.orm import Session
+
+from app.models.monitoring import MonitoringAlert, MonitoringLog
 from app.models.project import Project
-from app.models.monitoring import MonitoringLog, MonitoringAlert
 from app.services.monitoring import MonitoringService
 
 logger = logging.getLogger(__name__)

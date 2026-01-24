@@ -9,15 +9,16 @@
 # 3. 발송 로그 기록
 """
 
-from typing import Optional, List
-from sqlalchemy.orm import Session
 from datetime import datetime
-import aiosmtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import List, Optional
 
-from app.models.email_log import EmailLog
+import aiosmtplib
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.models.email_log import EmailLog
 
 
 class EmailService:

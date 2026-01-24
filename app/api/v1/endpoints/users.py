@@ -9,17 +9,19 @@
 # 3. HTTPException = Laravel의 abort()와 유사
 """
 
-from typing import List, Annotated
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from typing import Annotated, List
+
+from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.deps import get_db, get_current_active_user
-from app.core.security import get_password_hash, verify_password, create_access_token
+
+from app.core.deps import get_current_active_user, get_db
+from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import (
-    UserCreate,
-    UserUpdate,
     Token,
+    UserCreate,
     UserResponse,
+    UserUpdate,
 )
 
 router = APIRouter()

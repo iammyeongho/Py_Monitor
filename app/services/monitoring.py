@@ -9,31 +9,33 @@
 # 3. ssl = Laravel의 SSL 검증과 유사
 """
 
-from sqlalchemy.orm import Session
-from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSetting
-from app.schemas.monitoring import (
-    MonitoringLogCreate,
-    MonitoringAlertCreate,
-    MonitoringSettingCreate,
-    MonitoringSettingUpdate,
-    SSLDomainStatusCreate,
-    MonitoringStatus,
-    SSLStatus,
-    MonitoringResponse,
-)
-from datetime import datetime
-from typing import List, Optional, Dict
 import asyncio
-import aiohttp
-import ssl
+import logging
 import socket
+import ssl
+from datetime import datetime
+from typing import Dict, List, Optional
+from urllib.parse import urlparse
+
+import aiohttp
 import whois
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSetting
 from app.models.project import Project
 from app.models.ssl_domain import SSLDomainStatus
+from app.schemas.monitoring import (
+    MonitoringAlertCreate,
+    MonitoringLogCreate,
+    MonitoringResponse,
+    MonitoringSettingCreate,
+    MonitoringSettingUpdate,
+    MonitoringStatus,
+    SSLDomainStatusCreate,
+    SSLStatus,
+)
 from app.utils.notifications import NotificationService
-from sqlalchemy import and_
-import logging
-from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 

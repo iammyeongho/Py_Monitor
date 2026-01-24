@@ -9,12 +9,14 @@
 # 3. 첨부 파일 지원
 """
 
-import aiosmtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+import aiosmtplib
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.models.email_log import EmailLog
-from sqlalchemy.orm import Session
 
 
 async def send_email_alert(

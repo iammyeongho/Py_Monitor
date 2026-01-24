@@ -10,9 +10,10 @@
 # 4. func.now() = Laravel의 now()와 유사
 """
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
 from app.db.base_class import Base
 
 

@@ -11,15 +11,16 @@
 
 from sqlalchemy import (
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Integer,
     String,
     Text,
-    Float,
-    DateTime,
-    ForeignKey,
     func,
 )
 from sqlalchemy.orm import relationship
+
 from app.db.session import Base
 
 

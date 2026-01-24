@@ -9,8 +9,8 @@
 """
 
 import logging
-from logging.handlers import RotatingFileHandler
 import os
+from logging.handlers import RotatingFileHandler
 
 # 로그 디렉토리 설정
 LOG_DIR = os.getenv("LOG_DIR", "logs")

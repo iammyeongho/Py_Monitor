@@ -1,6 +1,6 @@
 from .base import BaseSchema
-from .user import User, UserCreate, UserUpdate, UserLogin, Token, TokenData
 from .project import Project, ProjectCreate, ProjectUpdate
+from .user import Token, TokenData, User, UserCreate, UserLogin, UserUpdate
 
 __all__ = [
     "BaseSchema",

@@ -1,11 +1,26 @@
 """
-알림(Notification) 관련 엔드포인트
+알림(Notification) 엔드포인트 모듈
+
+이 파일은 FastAPI를 사용하여 알림 관련 API 엔드포인트를 정의합니다.
+Laravel의 NotificationController와 유사한 역할을 합니다.
+
+주요 기능:
+1. 알림 생성/조회/수정/삭제 (CRUD)
+2. 읽지 않은 알림 조회
+3. 모든 알림 읽음 처리
+
+Laravel과의 주요 차이점:
+1. APIRouter = Laravel의 Route::controller()와 유사
+2. Depends = Laravel의 dependency injection과 유사
+3. HTTPException = Laravel의 abort()와 유사
 """
+
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from app.core.deps import get_db, get_current_user
+
+from app.core.deps import get_current_user, get_db
 from app.models.notification import Notification
 from app.models.project import Project
 
@@ -18,6 +33,7 @@ def create_notification(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """새로운 알림을 생성합니다."""
     project = db.query(Project).filter(Project.id == notification["project_id"]).first()
     if not project or project.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -34,6 +50,7 @@ def get_notifications_by_project(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """특정 프로젝트의 모든 알림을 조회합니다."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project or project.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -45,6 +62,7 @@ def get_notifications_by_project(
 def get_unread_notifications(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
+    """현재 사용자의 읽지 않은 모든 알림을 조회합니다."""
     notifs = (
         db.query(Notification)
         .join(Project)
@@ -60,6 +78,7 @@ def get_notification(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """특정 알림을 조회합니다."""
     notif = (
         db.query(Notification)
         .join(Project)
@@ -78,6 +97,7 @@ def update_notification(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """알림 정보를 업데이트합니다."""
     notif = (
         db.query(Notification)
         .join(Project)
@@ -99,6 +119,7 @@ def delete_notification(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    """알림을 삭제합니다."""
     notif = (
         db.query(Notification)
         .join(Project)
@@ -116,6 +137,7 @@ def delete_notification(
 def mark_all_as_read(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
+    """현재 사용자의 모든 알림을 읽음 처리합니다."""
     notifs = (
         db.query(Notification)
         .join(Project)

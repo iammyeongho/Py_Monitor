@@ -1,7 +1,7 @@
 """
 # Laravel 개발자를 위한 설명
 # 이 파일은 모니터링 관련 모델들을 정의합니다.
-# SQLAlchemy ORM을 사용하여 monitoring_logs, monitoring_alerts, monitoring_settings 테이블을 정의합니다.
+# SQLAlchemy ORM을 사용하여 모니터링 관련 테이블들을 정의합니다.
 #
 # Laravel과의 주요 차이점:
 # 1. 각 모델이 하나의 파일에 정의됨 (Laravel은 보통 각 모델을 별도 파일로 분리)
@@ -10,19 +10,21 @@
 # 4. ondelete='CASCADE' = Laravel의 onDelete('cascade')와 유사
 """
 
+from datetime import datetime
+
 from sqlalchemy import (
+    Boolean,
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Integer,
     String,
-    Float,
-    Boolean,
     Text,
-    DateTime,
-    ForeignKey,
 )
 from sqlalchemy.orm import relationship
+
 from app.db.base_class import Base
-from datetime import datetime
 
 
 class MonitoringLog(Base):

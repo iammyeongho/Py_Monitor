@@ -9,8 +9,9 @@
 # 3. Config = Laravel의 $casts와 유사
 """
 
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 

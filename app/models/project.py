@@ -12,13 +12,14 @@
 from sqlalchemy import (
     Boolean,
     Column,
-    Integer,
-    String,
     DateTime,
     ForeignKey,
+    Integer,
+    String,
     func,
 )
 from sqlalchemy.orm import relationship
+
 from app.db.base_class import Base
 
 
