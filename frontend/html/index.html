@@ -452,20 +452,19 @@
         }
       }
 
+      // 썸네일 URL 생성 (외부 서비스 이용)
+      const thumbnailUrl = getThumbnailUrl(proj.url);
+
       return `
         <div class="project-card" data-id="${proj.id}">
-          <div class="project-card-header">
-            <div class="status-group">
-              <span class="project-status ${statusClass}">${statusText}</span>
-              ${sslBadge}
+          <div class="project-thumbnail" onclick="openDetailModal(${proj.id})">
+            <img src="${thumbnailUrl}" alt="${escapeHtml(proj.title)}" loading="lazy" onerror="this.src='/frontend/img/placeholder.svg'; this.onerror=null;">
+            <div class="thumbnail-overlay">
+              <div class="status-group">
+                <span class="project-status ${statusClass}">${statusText}</span>
+                ${sslBadge}
+              </div>
             </div>
-            <button class="project-menu-btn" onclick="openSettingModal(${proj.id})">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="1"></circle>
-                <circle cx="12" cy="5" r="1"></circle>
-                <circle cx="12" cy="19" r="1"></circle>
-              </svg>
-            </button>
           </div>
           <div class="project-card-body" onclick="openDetailModal(${proj.id})">
             <h3 class="project-title">${escapeHtml(proj.title)}</h3>
@@ -486,6 +485,13 @@
               <span class="project-stat-value">${formatTime(proj.last_checked_at)}</span>
             </div>
           </div>
+          <button class="project-menu-btn" onclick="event.stopPropagation(); openSettingModal(${proj.id})">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="12" cy="5" r="1"></circle>
+              <circle cx="12" cy="19" r="1"></circle>
+            </svg>
+          </button>
         </div>
       `;
     }
@@ -747,6 +753,13 @@
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
       }, 3000);
+    }
+
+    // 썸네일 URL 생성 (외부 서비스 이용)
+    function getThumbnailUrl(url) {
+      // Thum.io 무료 스크린샷 서비스 사용
+      const encodedUrl = encodeURIComponent(url);
+      return `https://image.thum.io/get/width/400/crop/250/${url}`;
     }
 
     // 유틸리티 함수들

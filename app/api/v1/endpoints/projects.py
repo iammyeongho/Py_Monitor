@@ -9,9 +9,10 @@
 # 3. HTTPException = Laravel의 abort()와 유사
 """
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db
@@ -22,6 +23,7 @@ from app.schemas.project import (
     ProjectResponse,
     ProjectUpdate,
 )
+from app.services.screenshot import ScreenshotService
 
 router = APIRouter()
 
@@ -145,3 +147,94 @@ def delete_project(
     db.commit()
     db.refresh(db_project)
     return db_project
+
+
+# =====================
+# 스크린샷 엔드포인트
+# =====================
+
+
+@router.get("/{project_id}/screenshot")
+async def get_project_screenshot(
+    project_id: int,
+    force: bool = False,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트 웹사이트의 스크린샷을 가져옵니다."""
+    db_project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+        )
+        .first()
+    )
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    service = ScreenshotService(db)
+
+    # 캐시된 스크린샷이 있으면 반환
+    if not force and db_project.snapshot_path:
+        return {
+            "screenshot_url": db_project.snapshot_path,
+            "thumbnail_url": service.get_preview_url(str(db_project.url)),
+            "last_captured_at": db_project.last_snapshot_at,
+            "cached": True
+        }
+
+    # 새로 캡처
+    screenshot_path = await service.capture_screenshot(project_id, force=force)
+
+    if screenshot_path:
+        return {
+            "screenshot_url": screenshot_path,
+            "thumbnail_url": service.get_preview_url(str(db_project.url)),
+            "last_captured_at": db_project.last_snapshot_at,
+            "cached": False
+        }
+
+    # 캡처 실패 시 외부 URL 반환
+    return {
+        "screenshot_url": None,
+        "thumbnail_url": service.get_preview_url(str(db_project.url)),
+        "last_captured_at": None,
+        "cached": False
+    }
+
+
+@router.get("/{project_id}/thumbnail")
+def get_project_thumbnail(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트의 썸네일 URL을 반환합니다 (외부 서비스 이용)."""
+    db_project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+        )
+        .first()
+    )
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    service = ScreenshotService(db)
+    url = str(db_project.url)
+
+    return {
+        "project_id": project_id,
+        "url": url,
+        "thumbnail_url": service.get_preview_url(url),
+        "favicon_url": service.get_thumbnail_url(url),
+        "cached_screenshot": db_project.snapshot_path
+    }
