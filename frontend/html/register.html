@@ -7,48 +7,125 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/frontend/style/style.css">
 </head>
-<body>
+<body class="auth-body">
   <div class="auth-container">
-    <h2>회원가입</h2>
-    <form id="register-form" class="auth-form">
-      <div class="form-group">
-        <label for="name">이름</label>
-        <input type="text" id="name" required>
+    <div class="auth-card">
+      <!-- 로고 -->
+      <div class="auth-header">
+        <a href="index.html" class="auth-logo">PyMonitor</a>
+        <p class="auth-subtitle">새로운 계정 만들기</p>
       </div>
-      <div class="form-group">
-        <label for="email">이메일</label>
-        <input type="email" id="email" required>
+
+      <!-- 회원가입 폼 -->
+      <form id="register-form" class="auth-form">
+        <div class="form-group">
+          <label class="form-label" for="name">이름</label>
+          <input type="text" class="form-input" id="name" placeholder="홍길동" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">이메일</label>
+          <input type="email" class="form-input" id="email" placeholder="example@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">비밀번호</label>
+          <input type="password" class="form-input" id="password" placeholder="8자 이상 입력하세요" minlength="8" required>
+          <span class="form-hint">최소 8자 이상</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password-confirm">비밀번호 확인</label>
+          <input type="password" class="form-input" id="password-confirm" placeholder="비밀번호를 다시 입력하세요" required>
+        </div>
+
+        <!-- 에러 메시지 -->
+        <div class="auth-error" id="error-message" style="display: none;"></div>
+
+        <!-- 성공 메시지 -->
+        <div class="auth-success" id="success-message" style="display: none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="register-btn">
+          <span class="btn-text">회원가입</span>
+          <span class="btn-loading" style="display: none;">
+            <span class="loading-spinner-sm"></span>
+          </span>
+        </button>
+      </form>
+
+      <!-- 구분선 -->
+      <div class="auth-divider">
+        <span>또는</span>
       </div>
-      <div class="form-group">
-        <label for="password">비밀번호</label>
-        <input type="password" id="password" required>
+
+      <!-- 로그인 링크 -->
+      <div class="auth-footer">
+        <p>이미 계정이 있으신가요?</p>
+        <a href="login.html" class="btn btn-secondary btn-block">로그인</a>
       </div>
-      <div class="form-group">
-        <label for="password-confirm">비밀번호 확인</label>
-        <input type="password" id="password-confirm" required>
-      </div>
-      <button type="submit" class="btn btn-primary">회원가입</button>
-    </form>
-    <p class="auth-link">
-      이미 계정이 있으신가요? <a href="login.html">로그인</a>
-    </p>
+    </div>
+
+    <!-- 저작권 -->
+    <p class="auth-copyright">PyMonitor. All rights reserved.</p>
   </div>
 
   <script src="/frontend/js/auth.js"></script>
   <script>
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
+    const form = document.getElementById('register-form');
+    const registerBtn = document.getElementById('register-btn');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
       const name = document.getElementById('name').value;
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       const passwordConfirm = document.getElementById('password-confirm').value;
-      
+
+      // 에러/성공 메시지 숨김
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      // 비밀번호 확인
       if (password !== passwordConfirm) {
-        alert('비밀번호가 일치하지 않습니다.');
+        errorMessage.textContent = '비밀번호가 일치하지 않습니다.';
+        errorMessage.style.display = 'block';
         return;
       }
-      
-      await auth.register(email, password, name);
+
+      // 비밀번호 길이 확인
+      if (password.length < 8) {
+        errorMessage.textContent = '비밀번호는 8자 이상이어야 합니다.';
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      // 버튼 로딩 상태
+      registerBtn.querySelector('.btn-text').style.display = 'none';
+      registerBtn.querySelector('.btn-loading').style.display = 'inline-flex';
+      registerBtn.disabled = true;
+
+      try {
+        await auth.register(email, password, name);
+
+        // 성공 메시지 표시
+        successMessage.textContent = '회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.';
+        successMessage.style.display = 'block';
+
+        // 2초 후 로그인 페이지로 이동
+        setTimeout(() => {
+          window.location.href = '/frontend/html/login.html';
+        }, 2000);
+
+      } catch (error) {
+        // 에러 메시지 표시
+        errorMessage.textContent = error.message;
+        errorMessage.style.display = 'block';
+
+        // 버튼 원래 상태로
+        registerBtn.querySelector('.btn-text').style.display = 'inline';
+        registerBtn.querySelector('.btn-loading').style.display = 'none';
+        registerBtn.disabled = false;
+      }
     });
   </script>
 </body>
