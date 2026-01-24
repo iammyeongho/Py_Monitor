@@ -94,4 +94,5 @@ dmypy.json
 .pyre/ 
 
 # CLAUDE PROMPTS
-CLAUDE_*.mdCLAUDE.md
+CLAUDE.md
+CLAUDE_*.md

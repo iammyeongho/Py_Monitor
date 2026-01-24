@@ -99,7 +99,33 @@ const auth = {
             window.location.href = '/frontend/html/login.html';
             return false;
         }
+
+        // 토큰 유효성 비동기 검증 (백그라운드)
+        this.validateToken().catch(() => {
+            this.logout();
+        });
+
         return true;
+    },
+
+    // 토큰 유효성 검증
+    async validateToken() {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No token');
+        }
+
+        const response = await fetch('/api/v1/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Invalid token');
+        }
+
+        return await response.json();
     },
 
     // 토큰 가져오기
