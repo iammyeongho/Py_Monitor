@@ -7,9 +7,16 @@
 # 1. async/await = Laravel의 비동기 처리와 유사
 # 2. aiohttp = Laravel의 HTTP 클라이언트와 유사
 # 3. ssl = Laravel의 SSL 검증과 유사
+#
+# 추가 기능:
+# 4. TCP 포트 체크 - 특정 포트 연결 가능 여부 확인
+# 5. DNS 조회 - 도메인 DNS 레코드 확인
+# 6. 콘텐츠 검증 - 응답에 특정 문자열 포함 여부 확인
+# 7. 보안 헤더 체크 - HTTP 보안 헤더 존재 여부 확인
 """
 
 import asyncio
+import dns.resolver
 import logging
 import socket
 import ssl
@@ -26,14 +33,20 @@ from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSett
 from app.models.project import Project
 from app.models.ssl_domain import SSLDomainStatus
 from app.schemas.monitoring import (
+    ContentCheckResponse,
+    DNSLookupResponse,
+    DNSRecord,
     MonitoringAlertCreate,
     MonitoringLogCreate,
     MonitoringResponse,
     MonitoringSettingCreate,
     MonitoringSettingUpdate,
     MonitoringStatus,
+    SecurityHeader,
+    SecurityHeadersResponse,
     SSLDomainStatusCreate,
     SSLStatus,
+    TCPPortCheckResponse,
 )
 from app.utils.notifications import NotificationService
 
@@ -228,6 +241,248 @@ class MonitoringService:
                 f"Error checking domain expiry for project {project.id}: {str(e)}"
             )
             return None
+
+    async def check_tcp_port(
+        self, host: str, port: int, timeout: int = 5
+    ) -> TCPPortCheckResponse:
+        """TCP 포트 연결 가능 여부 확인"""
+        start_time = datetime.now()
+        try:
+            # 비동기로 소켓 연결 시도
+            loop = asyncio.get_event_loop()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+
+            await loop.run_in_executor(None, sock.connect, (host, port))
+            response_time = (datetime.now() - start_time).total_seconds()
+            sock.close()
+
+            return TCPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=True,
+                response_time=response_time,
+            )
+        except socket.timeout:
+            return TCPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=False,
+                error_message="Connection timed out",
+            )
+        except ConnectionRefusedError:
+            return TCPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=False,
+                error_message="Connection refused",
+            )
+        except Exception as e:
+            logger.error(f"Error checking TCP port {host}:{port}: {str(e)}")
+            return TCPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=False,
+                error_message=str(e),
+            )
+
+    async def check_dns_lookup(
+        self, domain: str, record_type: str = "A"
+    ) -> DNSLookupResponse:
+        """DNS 레코드 조회"""
+        try:
+            loop = asyncio.get_event_loop()
+            resolver = dns.resolver.Resolver()
+            resolver.timeout = 10
+            resolver.lifetime = 10
+
+            # 비동기로 DNS 조회 실행
+            answers = await loop.run_in_executor(
+                None, lambda: resolver.resolve(domain, record_type)
+            )
+
+            records = []
+            for rdata in answers:
+                records.append(
+                    DNSRecord(
+                        record_type=record_type,
+                        value=str(rdata),
+                        ttl=answers.ttl,
+                    )
+                )
+
+            return DNSLookupResponse(
+                domain=domain,
+                records=records,
+                is_resolved=True,
+            )
+        except dns.resolver.NXDOMAIN:
+            return DNSLookupResponse(
+                domain=domain,
+                records=[],
+                is_resolved=False,
+                error_message="Domain does not exist (NXDOMAIN)",
+            )
+        except dns.resolver.NoAnswer:
+            return DNSLookupResponse(
+                domain=domain,
+                records=[],
+                is_resolved=False,
+                error_message=f"No {record_type} records found",
+            )
+        except dns.resolver.Timeout:
+            return DNSLookupResponse(
+                domain=domain,
+                records=[],
+                is_resolved=False,
+                error_message="DNS query timed out",
+            )
+        except Exception as e:
+            logger.error(f"Error checking DNS for {domain}: {str(e)}")
+            return DNSLookupResponse(
+                domain=domain,
+                records=[],
+                is_resolved=False,
+                error_message=str(e),
+            )
+
+    async def check_content(
+        self, url: str, expected_content: str, timeout: int = 30
+    ) -> ContentCheckResponse:
+        """응답 콘텐츠에 특정 문자열 포함 여부 확인"""
+        start_time = datetime.now()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=timeout) as response:
+                    response_time = (datetime.now() - start_time).total_seconds()
+                    content = await response.text()
+
+                    # 대소문자 구분 없이 검색
+                    is_found = expected_content.lower() in content.lower()
+
+                    return ContentCheckResponse(
+                        url=url,
+                        expected_content=expected_content,
+                        is_found=is_found,
+                        response_time=response_time,
+                        status_code=response.status,
+                    )
+        except asyncio.TimeoutError:
+            return ContentCheckResponse(
+                url=url,
+                expected_content=expected_content,
+                is_found=False,
+                error_message="Request timed out",
+            )
+        except Exception as e:
+            logger.error(f"Error checking content for {url}: {str(e)}")
+            return ContentCheckResponse(
+                url=url,
+                expected_content=expected_content,
+                is_found=False,
+                error_message=str(e),
+            )
+
+    async def check_security_headers(
+        self, url: str, timeout: int = 30
+    ) -> SecurityHeadersResponse:
+        """HTTP 보안 헤더 체크"""
+        # 체크할 보안 헤더 목록 및 설명
+        security_headers_config = [
+            {
+                "name": "Strict-Transport-Security",
+                "description": "HTTPS 강제 (HSTS)",
+                "is_recommended": True,
+            },
+            {
+                "name": "Content-Security-Policy",
+                "description": "XSS 및 데이터 삽입 공격 방지",
+                "is_recommended": True,
+            },
+            {
+                "name": "X-Content-Type-Options",
+                "description": "MIME 타입 스니핑 방지",
+                "is_recommended": True,
+            },
+            {
+                "name": "X-Frame-Options",
+                "description": "클릭재킹 방지",
+                "is_recommended": True,
+            },
+            {
+                "name": "X-XSS-Protection",
+                "description": "XSS 필터 활성화 (레거시)",
+                "is_recommended": False,
+            },
+            {
+                "name": "Referrer-Policy",
+                "description": "리퍼러 정보 제어",
+                "is_recommended": True,
+            },
+            {
+                "name": "Permissions-Policy",
+                "description": "브라우저 기능 권한 제어",
+                "is_recommended": True,
+            },
+            {
+                "name": "Cache-Control",
+                "description": "캐시 동작 제어",
+                "is_recommended": False,
+            },
+        ]
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=timeout) as response:
+                    headers_result = []
+                    score = 0
+                    max_score = 0
+
+                    for header_config in security_headers_config:
+                        header_name = header_config["name"]
+                        header_value = response.headers.get(header_name)
+                        is_present = header_value is not None
+
+                        headers_result.append(
+                            SecurityHeader(
+                                name=header_name,
+                                value=header_value,
+                                is_present=is_present,
+                                is_recommended=header_config["is_recommended"],
+                                description=header_config["description"],
+                            )
+                        )
+
+                        # 권장 헤더만 점수 계산에 포함
+                        if header_config["is_recommended"]:
+                            max_score += 1
+                            if is_present:
+                                score += 1
+
+                    # 0-100 점수로 변환
+                    final_score = int((score / max_score) * 100) if max_score > 0 else 0
+
+                    return SecurityHeadersResponse(
+                        url=url,
+                        headers=headers_result,
+                        score=final_score,
+                        status_code=response.status,
+                    )
+        except asyncio.TimeoutError:
+            return SecurityHeadersResponse(
+                url=url,
+                headers=[],
+                score=0,
+                error_message="Request timed out",
+            )
+        except Exception as e:
+            logger.error(f"Error checking security headers for {url}: {str(e)}")
+            return SecurityHeadersResponse(
+                url=url,
+                headers=[],
+                score=0,
+                error_message=str(e),
+            )
 
     async def create_alert(
         self, project_id: int, alert_type: str, message: str
@@ -428,17 +683,32 @@ class MonitoringService:
 
 
 async def check_website(url: str, timeout: int = 30) -> MonitoringStatus:
-    """웹사이트 상태를 확인합니다."""
+    """웹사이트 상태를 확인합니다. (비동기 버전)"""
     start_time = datetime.now()
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=timeout) as response:
                 response_time = (datetime.now() - start_time).total_seconds()
                 return MonitoringStatus(
-                    is_up=True, response_time=response_time, status_code=response.status
+                    is_available=True, response_time=response_time, status_code=response.status
                 )
     except Exception as e:
-        return MonitoringStatus(is_up=False, error_message=str(e))
+        return MonitoringStatus(is_available=False, error_message=str(e))
+
+
+def check_website_sync(url: str, timeout: int = 30) -> MonitoringStatus:
+    """웹사이트 상태를 확인합니다. (동기 버전)"""
+    import requests
+
+    start_time = datetime.now()
+    try:
+        response = requests.get(url, timeout=timeout)
+        response_time = (datetime.now() - start_time).total_seconds()
+        return MonitoringStatus(
+            is_available=True, response_time=response_time, status_code=response.status_code
+        )
+    except Exception as e:
+        return MonitoringStatus(is_available=False, error_message=str(e))
 
 
 def check_ssl(hostname: str) -> SSLStatus:
@@ -471,8 +741,8 @@ def check_project_status(project: Project) -> MonitoringResponse:
     parsed_url = urlparse(str(project.url))
     hostname = parsed_url.netloc
 
-    # 웹사이트 상태 체크
-    status = check_website(project.url)
+    # 웹사이트 상태 체크 (동기 버전 사용)
+    status = check_website_sync(str(project.url))
 
     # SSL 체크 (HTTPS인 경우)
     ssl_status = None

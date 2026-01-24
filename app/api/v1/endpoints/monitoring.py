@@ -21,15 +21,23 @@ from app.models.monitoring import MonitoringSetting
 from app.models.project import Project
 from app.models.ssl_domain import SSLDomainStatus
 from app.schemas.monitoring import (
+    ContentCheckRequest,
+    ContentCheckResponse,
+    DNSLookupRequest,
+    DNSLookupResponse,
     MonitoringResponse,
     MonitoringSettingCreate,
     MonitoringSettingResponse,
     MonitoringSettingUpdate,
+    SecurityHeadersRequest,
+    SecurityHeadersResponse,
     SSLDomainStatusCreate,
     SSLDomainStatusResponse,
     SSLDomainStatusUpdate,
+    TCPPortCheckRequest,
+    TCPPortCheckResponse,
 )
-from app.services.monitoring import check_project_status
+from app.services.monitoring import check_project_status, MonitoringService
 
 router = APIRouter()
 
@@ -277,3 +285,85 @@ def delete_ssl_status(
     db.delete(db_ssl)
     db.commit()
     return {"id": ssl_id, "message": "SSL status deleted"}
+
+
+# =====================
+# TCP 포트 체크 엔드포인트
+# =====================
+
+
+@router.post("/check/tcp", response_model=TCPPortCheckResponse)
+async def check_tcp_port(
+    request: TCPPortCheckRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """TCP 포트 연결 가능 여부를 확인합니다."""
+    service = MonitoringService(db)
+    result = await service.check_tcp_port(
+        host=request.host,
+        port=request.port,
+        timeout=request.timeout,
+    )
+    return result
+
+
+# =====================
+# DNS 조회 엔드포인트
+# =====================
+
+
+@router.post("/check/dns", response_model=DNSLookupResponse)
+async def check_dns_lookup(
+    request: DNSLookupRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """DNS 레코드를 조회합니다."""
+    service = MonitoringService(db)
+    result = await service.check_dns_lookup(
+        domain=request.domain,
+        record_type=request.record_type,
+    )
+    return result
+
+
+# =====================
+# 콘텐츠 검증 엔드포인트
+# =====================
+
+
+@router.post("/check/content", response_model=ContentCheckResponse)
+async def check_content(
+    request: ContentCheckRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """응답 콘텐츠에 특정 문자열이 포함되어 있는지 확인합니다."""
+    service = MonitoringService(db)
+    result = await service.check_content(
+        url=request.url,
+        expected_content=request.expected_content,
+        timeout=request.timeout,
+    )
+    return result
+
+
+# =====================
+# 보안 헤더 체크 엔드포인트
+# =====================
+
+
+@router.post("/check/security-headers", response_model=SecurityHeadersResponse)
+async def check_security_headers(
+    request: SecurityHeadersRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """HTTP 보안 헤더를 확인합니다."""
+    service = MonitoringService(db)
+    result = await service.check_security_headers(
+        url=request.url,
+        timeout=request.timeout,
+    )
+    return result

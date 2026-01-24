@@ -162,7 +162,7 @@ class SSLStatus(BaseModel):
 class MonitoringStatus(BaseModel):
     """모니터링 상태 스키마"""
 
-    is_up: bool
+    is_available: bool
     response_time: Optional[float] = None
     status_code: Optional[int] = None
     error_message: Optional[str] = None
@@ -177,4 +177,127 @@ class MonitoringResponse(BaseModel):
     url: str
     status: MonitoringStatus
     ssl: Optional[SSLStatus] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# TCP 포트 체크 스키마
+class TCPPortCheckRequest(BaseModel):
+    """TCP 포트 체크 요청 스키마"""
+
+    host: str
+    port: int = Field(ge=1, le=65535)
+    timeout: int = Field(default=5, ge=1, le=30)
+
+
+class TCPPortCheckResponse(BaseModel):
+    """TCP 포트 체크 응답 스키마"""
+
+    host: str
+    port: int
+    is_open: bool
+    response_time: Optional[float] = None
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# DNS 조회 스키마
+class DNSLookupRequest(BaseModel):
+    """DNS 조회 요청 스키마"""
+
+    domain: str
+    record_type: str = Field(default="A", pattern="^(A|AAAA|CNAME|MX|NS|TXT|SOA)$")
+
+
+class DNSRecord(BaseModel):
+    """DNS 레코드 스키마"""
+
+    record_type: str
+    value: str
+    ttl: Optional[int] = None
+
+
+class DNSLookupResponse(BaseModel):
+    """DNS 조회 응답 스키마"""
+
+    domain: str
+    records: list[DNSRecord] = []
+    is_resolved: bool
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# 콘텐츠 검증 스키마
+class ContentCheckRequest(BaseModel):
+    """콘텐츠 검증 요청 스키마"""
+
+    url: str
+    expected_content: str
+    timeout: int = Field(default=30, ge=5, le=120)
+
+
+class ContentCheckResponse(BaseModel):
+    """콘텐츠 검증 응답 스키마"""
+
+    url: str
+    expected_content: str
+    is_found: bool
+    response_time: Optional[float] = None
+    status_code: Optional[int] = None
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# 보안 헤더 체크 스키마
+class SecurityHeadersRequest(BaseModel):
+    """보안 헤더 체크 요청 스키마"""
+
+    url: str
+    timeout: int = Field(default=30, ge=5, le=120)
+
+
+class SecurityHeader(BaseModel):
+    """보안 헤더 정보 스키마"""
+
+    name: str
+    value: Optional[str] = None
+    is_present: bool
+    is_recommended: bool = True
+    description: str = ""
+
+
+class SecurityHeadersResponse(BaseModel):
+    """보안 헤더 체크 응답 스키마"""
+
+    url: str
+    headers: list[SecurityHeader] = []
+    score: int = Field(ge=0, le=100)  # 보안 점수 (0-100)
+    status_code: Optional[int] = None
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# 종합 상태 체크 스키마
+class HealthCheckRequest(BaseModel):
+    """종합 상태 체크 요청 스키마"""
+
+    project_id: int
+    check_http: bool = True
+    check_ssl: bool = True
+    check_tcp_ports: list[int] = Field(default_factory=list)
+    check_dns: bool = True
+    check_content: Optional[str] = None
+    check_security_headers: bool = False
+
+
+class HealthCheckResponse(BaseModel):
+    """종합 상태 체크 응답 스키마"""
+
+    project_id: int
+    http_status: Optional[MonitoringStatus] = None
+    ssl_status: Optional[SSLStatus] = None
+    tcp_port_results: list[TCPPortCheckResponse] = Field(default_factory=list)
+    dns_result: Optional[DNSLookupResponse] = None
+    content_result: Optional[ContentCheckResponse] = None
+    security_headers_result: Optional[SecurityHeadersResponse] = None
+    overall_healthy: bool
     checked_at: datetime = Field(default_factory=datetime.now)
