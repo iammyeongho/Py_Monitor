@@ -2,7 +2,7 @@
 # Laravel 개발자를 위한 설명
 # 이 파일은 Laravel의 Auth와 유사한 역할을 합니다.
 # FastAPI를 사용하여 보안 관련 기능을 구현합니다.
-# 
+#
 # Laravel과의 주요 차이점:
 # 1. JWT = Laravel의 Sanctum과 유사
 # 2. Depends = Laravel의 middleware와 유사
@@ -26,13 +26,16 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # OAuth2 토큰 URL 설정
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/users/login")
 
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """비밀번호를 검증합니다."""
     return pwd_context.verify(plain_password, hashed_password)
 
+
 def get_password_hash(password: str) -> str:
     """비밀번호를 해싱합니다."""
     return pwd_context.hash(password)
+
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """JWT 토큰을 생성합니다."""
@@ -42,12 +45,14 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+    )
     return encoded_jwt
 
+
 async def get_current_user(
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
     """현재 인증된 사용자를 가져옵니다."""
     credentials_exception = HTTPException(
@@ -56,7 +61,9 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
@@ -67,6 +74,7 @@ async def get_current_user(
         raise credentials_exception
     return user
 
+
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
@@ -74,6 +82,7 @@ async def get_current_active_user(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
 
 async def get_current_superuser(
     current_user: User = Depends(get_current_user),

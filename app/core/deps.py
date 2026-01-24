@@ -1,15 +1,15 @@
-from typing import Generator, Optional
+from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.core.security import verify_password
 from app.db.session import SessionLocal
 from app.models.user import User
 from app.schemas.user import TokenData
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login")
+
 
 def get_db() -> Generator:
     """데이터베이스 세션 의존성"""
@@ -19,9 +19,9 @@ def get_db() -> Generator:
     finally:
         db.close()
 
+
 async def get_current_user(
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
     """현재 인증된 사용자 가져오기"""
     credentials_exception = HTTPException(
@@ -39,16 +39,17 @@ async def get_current_user(
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.email == token_data.email).first()
     if user is None:
         raise credentials_exception
     return user
 
+
 async def get_current_active_user(
     current_user: User = Depends(get_current_user),
 ) -> User:
     """현재 활성화된 사용자 가져오기"""
-    if not current_user.status:
+    if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user 
+    return current_user
