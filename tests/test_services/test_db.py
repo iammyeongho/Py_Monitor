@@ -2,6 +2,7 @@
 데이터베이스 연결 및 모델 관계 테스트
 """
 
+import uuid
 import pytest
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
@@ -9,6 +10,12 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSetting
 from sqlalchemy import text
+
+
+def unique_email(prefix: str = "test") -> str:
+    """고유한 이메일 생성"""
+    return f"{prefix}_{uuid.uuid4().hex[:8]}@example.com"
+
 
 def test_db_connection():
     """데이터베이스 연결 테스트"""
@@ -28,7 +35,7 @@ def test_model_relationships():
     try:
         # 사용자 생성
         user = User(
-            email="test@example.com",
+            email=unique_email("dbtest"),
             hashed_password="test_password",
             full_name="Test User"
         )

@@ -84,6 +84,26 @@ def get_unread_notifications(
     return notifs
 
 
+@router.put("/mark-all-read", response_model=dict)
+def mark_all_as_read(
+    db: Session = Depends(get_db), current_user=Depends(get_current_user)
+):
+    """현재 사용자의 모든 알림을 읽음 처리합니다."""
+    now = datetime.now(timezone.utc)
+    notifs = (
+        db.query(Notification)
+        .join(Project)
+        .filter(Project.user_id == current_user.id, Notification.is_read.is_(False))
+        .all()
+    )
+    count = len(notifs)
+    for notif in notifs:
+        notif.is_read = True
+        notif.read_at = now
+    db.commit()
+    return {"message": f"{count} notifications marked as read"}
+
+
 @router.get("/{notification_id}", response_model=NotificationResponse)
 def get_notification(
     notification_id: int,
@@ -151,23 +171,3 @@ def delete_notification(
     db.delete(notif)
     db.commit()
     return {"id": notification_id, "message": "Notification deleted"}
-
-
-@router.put("/mark-all-read", response_model=dict)
-def mark_all_as_read(
-    db: Session = Depends(get_db), current_user=Depends(get_current_user)
-):
-    """현재 사용자의 모든 알림을 읽음 처리합니다."""
-    now = datetime.now(timezone.utc)
-    notifs = (
-        db.query(Notification)
-        .join(Project)
-        .filter(Project.user_id == current_user.id, Notification.is_read.is_(False))
-        .all()
-    )
-    count = len(notifs)
-    for notif in notifs:
-        notif.is_read = True
-        notif.read_at = now
-    db.commit()
-    return {"message": f"{count} notifications marked as read"}

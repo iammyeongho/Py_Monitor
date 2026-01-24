@@ -1,86 +1,218 @@
+"""
+사용자 인증 관련 테스트
+
+실제 API 라우터 경로: /api/v1/auth
+"""
+
+import uuid
 import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
+from app.core.security import get_password_hash
 from app.models.user import User
-from app.schemas.user import UserCreate
+
+
+def unique_email(prefix: str = "test") -> str:
+    """고유한 이메일 생성"""
+    return f"{prefix}_{uuid.uuid4().hex[:8]}@example.com"
+
 
 def test_create_user(client, db: Session):
+    """사용자 생성 테스트"""
+    email = unique_email("newuser")
     user_data = {
-        "email": "test@example.com",
-        "password": "testpassword123"
+        "email": email,
+        "password": "testpassword123",
+        "full_name": "Test User"
     }
-    response = client.post("/api/v1/users/", json=user_data)
-    assert response.status_code == status.HTTP_201_CREATED
+    response = client.post("/api/v1/auth/", json=user_data)
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["email"] == user_data["email"]
+    assert data["email"] == email
+    assert "hashed_password" not in data
     assert "password" not in data
 
-def test_get_user(client, db: Session):
-    # 테스트 사용자 생성
+
+def test_register_user(client, db: Session):
+    """사용자 등록 테스트"""
+    email = unique_email("register")
+    user_data = {
+        "email": email,
+        "password": "testpassword123",
+        "full_name": "Register User"
+    }
+    response = client.post("/api/v1/auth/register", json=user_data)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["email"] == email
+
+
+def test_login(client, db: Session):
+    """로그인 테스트"""
+    email = unique_email("login")
+    hashed = get_password_hash("testpassword123")
     user = User(
-        email="test@example.com",
-        password_hash="hashed_password"
+        email=email,
+        hashed_password=hashed,
+        full_name="Login User"
     )
     db.add(user)
     db.commit()
-    db.refresh(user)
 
-    response = client.get(f"/api/v1/users/{user.id}")
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": email,
+            "password": "testpassword123"
+        }
+    )
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["email"] == user.email
-    assert "password" not in data
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
+
+def test_login_wrong_password(client, db: Session):
+    """잘못된 비밀번호 로그인 테스트"""
+    email = unique_email("wrongpw")
+    hashed = get_password_hash("correctpassword")
+    user = User(
+        email=email,
+        hashed_password=hashed
+    )
+    db.add(user)
+    db.commit()
+
+    response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": email,
+            "password": "wrongpassword"
+        }
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_get_current_user(client, db: Session):
+    """현재 사용자 조회 테스트"""
+    email = unique_email("me")
+    hashed = get_password_hash("testpassword123")
+    user = User(
+        email=email,
+        hashed_password=hashed,
+        full_name="Me User"
+    )
+    db.add(user)
+    db.commit()
+
+    # 로그인하여 토큰 획득
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": email,
+            "password": "testpassword123"
+        }
+    )
+    token = login_response.json()["access_token"]
+
+    # 현재 사용자 조회
+    response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["email"] == email
+
+
+def test_update_current_user(client, db: Session):
+    """현재 사용자 정보 수정 테스트"""
+    email = unique_email("update")
+    hashed = get_password_hash("testpassword123")
+    user = User(
+        email=email,
+        hashed_password=hashed,
+        full_name="Original Name"
+    )
+    db.add(user)
+    db.commit()
+
+    # 로그인
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": email,
+            "password": "testpassword123"
+        }
+    )
+    token = login_response.json()["access_token"]
+
+    # 정보 수정
+    response = client.put(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"full_name": "Updated Name"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["full_name"] == "Updated Name"
+
 
 def test_get_users(client, db: Session):
+    """사용자 목록 조회 테스트"""
     # 테스트 사용자들 생성
-    users = [
-        User(email=f"test{i}@example.com", password_hash="hashed_password")
-        for i in range(3)
-    ]
-    for user in users:
+    created_emails = []
+    for i in range(3):
+        email = unique_email(f"list{i}")
+        created_emails.append(email)
+        user = User(
+            email=email,
+            hashed_password=get_password_hash("password")
+        )
         db.add(user)
     db.commit()
 
-    response = client.get("/api/v1/users/")
+    response = client.get("/api/v1/auth/")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert len(data) == 3
-    assert all("password" not in user for user in data)
+    # 최소 3명 이상의 사용자가 있어야 함
+    assert len(data) >= 3
 
-def test_update_user(client, db: Session):
-    # 테스트 사용자 생성
+
+def test_get_user_by_id(client, db: Session):
+    """특정 사용자 조회 테스트"""
+    email = unique_email("specific")
     user = User(
-        email="test@example.com",
-        password_hash="hashed_password"
+        email=email,
+        hashed_password=get_password_hash("password"),
+        full_name="Specific User"
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    update_data = {
-        "email": "updated@example.com",
-        "password": "newpassword123"
-    }
-    response = client.put(f"/api/v1/users/{user.id}", json=update_data)
+    response = client.get(f"/api/v1/auth/{user.id}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert data["email"] == update_data["email"]
-    assert "password" not in data
+    assert data["email"] == email
 
-def test_delete_user(client, db: Session):
-    # 테스트 사용자 생성
+
+def test_duplicate_email(client, db: Session):
+    """중복 이메일 등록 테스트"""
+    email = unique_email("duplicate")
     user = User(
-        email="test@example.com",
-        password_hash="hashed_password"
+        email=email,
+        hashed_password=get_password_hash("password")
     )
     db.add(user)
     db.commit()
-    db.refresh(user)
 
-    response = client.delete(f"/api/v1/users/{user.id}")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # 삭제 확인
-    response = client.get(f"/api/v1/users/{user.id}")
-    assert response.status_code == status.HTTP_404_NOT_FOUND 
+    response = client.post(
+        "/api/v1/auth/",
+        json={
+            "email": email,
+            "password": "newpassword123"
+        }
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST

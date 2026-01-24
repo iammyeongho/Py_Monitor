@@ -25,7 +25,7 @@ class UserBase(BaseModel):
     full_name: Optional[str] = None
     profile_image: Optional[str] = None
     phone: Optional[str] = None
-    email_notifications: bool = True
+    email_notifications: Optional[bool] = True
 
 
 # User 생성 시 사용할 스키마
@@ -51,7 +51,6 @@ class User(UserBase, BaseSchema):
     is_active: bool = True
     is_superuser: bool = False
     last_login_at: Optional[datetime] = None
-    deleted_at: Optional[datetime] = None
 
 
 # User 로그인 시 사용할 스키마

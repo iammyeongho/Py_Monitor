@@ -63,7 +63,7 @@ class ProjectResponse(Project):
     """프로젝트 응답 스키마"""
 
     id: int
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     class Config:
