@@ -1,64 +1,78 @@
 """
 환경별 설정을 관리하는 모듈
 개발, 테스트, 운영 환경에 따른 설정을 분리하여 관리합니다.
+
+# Laravel 개발자를 위한 설명
+# 이 파일은 Laravel의 config/app.php와 유사한 역할을 합니다.
+# pydantic-settings를 사용하여 환경 변수를 자동으로 로드합니다.
+#
+# Pydantic v2에서는 Field(env=...)가 deprecated되었습니다.
+# 대신 필드명이 환경 변수명과 자동으로 매핑됩니다.
+# 예: POSTGRES_SERVER 필드 → POSTGRES_SERVER 환경 변수
 """
 
-import os
-from typing import Optional
-from pydantic_settings import BaseSettings
-from pydantic import Field
+from typing import Optional, List
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """애플리케이션 설정"""
-    
+    """애플리케이션 설정
+
+    pydantic-settings는 필드명을 대문자로 변환하여 환경 변수와 매핑합니다.
+    예: database_url → DATABASE_URL 환경 변수
+    """
+
     # 환경 설정
-    ENVIRONMENT: str = Field(default="development", env="ENVIRONMENT")
-    DEBUG: bool = Field(default=True, env="DEBUG")
-    
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+
     # 데이터베이스 설정
-    DATABASE_URL: str = Field(env="DATABASE_URL")
-    POSTGRES_SERVER: str = Field(default="localhost", env="POSTGRES_SERVER")
-    POSTGRES_USER: str = Field(default="postgres", env="POSTGRES_USER")
-    POSTGRES_PASSWORD: str = Field(default="password", env="POSTGRES_PASSWORD")
-    POSTGRES_DB: str = Field(default="py_monitor", env="POSTGRES_DB")
-    POSTGRES_PORT: int = Field(default=5432, env="POSTGRES_PORT")
-    
+    DATABASE_URL: Optional[str] = None
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "password"
+    POSTGRES_DB: str = "py_monitor"
+    POSTGRES_PORT: int = 5432
+
     # Redis 설정
-    REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
-    
+    REDIS_URL: Optional[str] = None
+
     # 보안 설정
-    SECRET_KEY: str = Field(env="SECRET_KEY")
-    ALGORITHM: str = Field(default="HS256", env="ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
-    
+    SECRET_KEY: str = "your-secret-key-here"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     # 이메일 설정
-    SMTP_HOST: Optional[str] = Field(default=None, env="SMTP_HOST")
-    SMTP_PORT: int = Field(default=587, env="SMTP_PORT")
-    SMTP_USER: Optional[str] = Field(default=None, env="SMTP_USER")
-    SMTP_PASSWORD: Optional[str] = Field(default=None, env="SMTP_PASSWORD")
-    SMTP_TLS: bool = Field(default=True, env="SMTP_TLS")
-    SMTP_USERNAME: str = Field(default="Py Monitor", env="SMTP_USERNAME")
-    SMTP_FROM: Optional[str] = Field(default=None, env="SMTP_FROM")
-    
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_TLS: bool = True
+    SMTP_USERNAME: str = "Py Monitor"
+    SMTP_FROM: Optional[str] = None
+
     # 모니터링 설정
-    DEFAULT_CHECK_INTERVAL: int = Field(default=300, env="DEFAULT_CHECK_INTERVAL")
-    DEFAULT_TIMEOUT: int = Field(default=30, env="DEFAULT_TIMEOUT")
-    
+    DEFAULT_CHECK_INTERVAL: int = 300
+    DEFAULT_TIMEOUT: int = 30
+
     # 로깅 설정
-    LOG_LEVEL: str = Field(default="INFO", env="LOG_LEVEL")
-    LOG_DIR: str = Field(default="logs", env="LOG_DIR")
-    
+    LOG_LEVEL: str = "INFO"
+    LOG_DIR: str = "logs"
+
     # API 설정
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Py_Monitor"
-    
+
     # CORS 설정
-    BACKEND_CORS_ORIGINS: list = Field(default=["*"], env="BACKEND_CORS_ORIGINS")
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+
+    # Pydantic v2 설정 (ConfigDict 사용)
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",  # 정의되지 않은 환경 변수 무시
+    )
 
 
 # 환경별 설정 인스턴스
@@ -83,4 +97,4 @@ def is_production() -> bool:
 
 def is_testing() -> bool:
     """테스트 환경인지 확인합니다."""
-    return settings.ENVIRONMENT == "testing" 
+    return settings.ENVIRONMENT == "testing"
