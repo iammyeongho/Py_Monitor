@@ -988,4 +988,38 @@ app.include_router(api_v2_router, prefix="/api/v2")
 
 ---
 
+## 17. 개발 진행 현황
+
+### 17.1 완료된 작업
+
+#### Backend
+- FastAPI 기반 REST API 구현
+- SQLAlchemy ORM 모델 정의 (User, Project, MonitoringLog, MonitoringAlert, MonitoringSetting, SSLDomainStatus)
+- JWT 인증 시스템 (OAuth2 password flow)
+- 모니터링 서비스 (TCP, DNS, Content, Security Headers 체크)
+- 로그 및 알림 API 엔드포인트
+
+#### Frontend
+- KREAM 스타일 디자인 시스템 적용
+- 로그인/회원가입 페이지
+- 대시보드 (프로젝트 목록, 상태 표시)
+- 프로젝트 등록 페이지
+- 프로젝트 상세 모달 (정보/히스토리/설정 탭)
+- 모니터링 도구 페이지 (TCP, DNS, Content, Security Headers)
+
+#### 테스트
+- pytest 기반 테스트 구성
+- API 통합 테스트
+
+### 17.2 진행 예정 작업
+
+- [ ] 실시간 WebSocket 모니터링 구현
+- [ ] 이메일/웹훅 알림 발송 기능
+- [ ] 모니터링 스케줄러 백그라운드 작업
+- [ ] SSL 인증서 만료 체크 기능
+- [ ] 도메인 만료 체크 기능
+- [ ] 프론트엔드 차트/그래프 시각화
+
+---
+
 *이 문서는 프로젝트의 일관성을 위해 작성되었습니다. 수정 시 팀원들과 협의 후 업데이트해주세요.*
