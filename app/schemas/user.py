@@ -51,6 +51,7 @@ class User(UserBase, BaseSchema):
     is_active: bool = True
     is_superuser: bool = False
     last_login_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = None
 
 
 # User 로그인 시 사용할 스키마

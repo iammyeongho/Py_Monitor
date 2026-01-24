@@ -34,6 +34,7 @@ class User(Base):
     last_login_at = Column(DateTime(timezone=True), nullable=True)  # 마지막 로그인 시간
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)  # soft delete
 
     # 관계 설정 (Laravel의 hasMany와 유사)
     # cascade="all, delete-orphan"은 Laravel의 onDelete('cascade')와 유사
