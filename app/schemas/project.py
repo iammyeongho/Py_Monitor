@@ -25,6 +25,7 @@ class ProjectBase(BaseModel):
     ip_address: Optional[str] = None
     url: HttpUrl
     title: str
+    description: Optional[str] = Field(None, max_length=500)
     status_interval: Optional[int] = Field(None, ge=1)
     expiry_d_day: Optional[int] = None
     expiry_interval: Optional[int] = Field(None, ge=1)
@@ -52,6 +53,8 @@ class Project(ProjectBase, BaseSchema):
     open_date: Optional[datetime] = None
     snapshot_path: Optional[str] = None
     last_snapshot_at: Optional[datetime] = None
+    status: bool = True
+    is_active: bool = True
     deleted_at: Optional[datetime] = None
 
 
@@ -60,15 +63,8 @@ class ProjectResponse(Project):
     """프로젝트 응답 스키마"""
 
     id: int
-    user_id: int
-    open_date: datetime
-    snapshot_path: Optional[str] = None
-    last_snapshot_at: Optional[datetime] = None
-    status: bool
-    is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
-    deleted_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

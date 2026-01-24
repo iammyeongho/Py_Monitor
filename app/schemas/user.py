@@ -23,7 +23,9 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: Optional[str] = None
-    status: bool = True
+    profile_image: Optional[str] = None
+    phone: Optional[str] = None
+    email_notifications: bool = True
 
 
 # User 생성 시 사용할 스키마
@@ -34,16 +36,21 @@ class UserCreate(UserBase):
 
 
 # User 업데이트 시 사용할 스키마
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
     """사용자 업데이트 스키마"""
 
+    full_name: Optional[str] = None
+    profile_image: Optional[str] = None
+    phone: Optional[str] = None
+    email_notifications: Optional[bool] = None
     password: Optional[str] = Field(None, min_length=8)
 
 
 # User 응답 시 사용할 스키마
 class User(UserBase, BaseSchema):
+    is_active: bool = True
+    is_superuser: bool = False
     last_login_at: Optional[datetime] = None
-    last_login_ip: Optional[str] = None
     deleted_at: Optional[datetime] = None
 
 
@@ -73,8 +80,6 @@ class TokenData(BaseModel):
 # User 응답 시 사용할 스키마
 class UserResponse(User):
     id: int
-    is_active: bool
-    is_superuser: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
 

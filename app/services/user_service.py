@@ -32,8 +32,10 @@ class UserService:
             email=user.email,
             hashed_password=hashed_password,
             full_name=user.full_name,
+            profile_image=user.profile_image,
+            phone=user.phone,
+            email_notifications=user.email_notifications,
             is_active=True,
-            is_superuser=user.is_superuser,
         )
         self.db.add(db_user)
         self.db.commit()
@@ -95,6 +97,11 @@ class UserService:
             return None
         if not pwd_context.verify(password, user.hashed_password):
             return None
+
+        # 마지막 로그인 시간 업데이트
+        user.last_login_at = datetime.utcnow()
+        self.db.commit()
+        self.db.refresh(user)
         return user
 
     def toggle_user_status(self, user_id: int) -> Optional[User]:

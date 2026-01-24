@@ -64,6 +64,9 @@ class MonitoringSettingBase(BaseModel):
     timeout: int = Field(default=30, ge=5, le=300)  # 5초~5분
     retry_count: int = Field(default=3, ge=1, le=5)
     alert_threshold: int = Field(default=3, ge=1, le=10)
+    is_alert_enabled: bool = True
+    alert_email: Optional[str] = None
+    webhook_url: Optional[str] = None
 
 
 class MonitoringSettingCreate(MonitoringSettingBase):
@@ -75,6 +78,9 @@ class MonitoringSettingUpdate(BaseModel):
     timeout: Optional[int] = Field(None, ge=5, le=300)
     retry_count: Optional[int] = Field(None, ge=1, le=5)
     alert_threshold: Optional[int] = Field(None, ge=1, le=10)
+    is_alert_enabled: Optional[bool] = None
+    alert_email: Optional[str] = None
+    webhook_url: Optional[str] = None
 
 
 class MonitoringSettingResponse(MonitoringSettingBase):
@@ -91,6 +97,7 @@ class SSLDomainStatusBase(BaseModel):
     project_id: int
     domain: str
     ssl_status: bool
+    ssl_issuer: Optional[str] = None
     ssl_expiry: Optional[datetime] = None
     domain_expiry: Optional[datetime] = None
 
@@ -99,8 +106,19 @@ class SSLDomainStatusCreate(SSLDomainStatusBase):
     pass
 
 
+class SSLDomainStatusUpdate(BaseModel):
+    ssl_status: Optional[bool] = None
+    ssl_issuer: Optional[str] = None
+    ssl_expiry: Optional[datetime] = None
+    domain_expiry: Optional[datetime] = None
+    last_checked_at: Optional[datetime] = None
+    check_error: Optional[str] = None
+
+
 class SSLDomainStatusResponse(SSLDomainStatusBase):
     id: int
+    last_checked_at: Optional[datetime] = None
+    check_error: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

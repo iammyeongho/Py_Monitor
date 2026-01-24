@@ -9,6 +9,7 @@
 # 3. HTTPException = Laravel의 abort()와 유사
 """
 
+from datetime import datetime, timezone
 from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, Form, HTTPException, status
@@ -37,7 +38,12 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         )
     hashed_password = get_password_hash(user.password)
     db_user = User(
-        email=user.email, hashed_password=hashed_password, full_name=user.full_name
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name,
+        profile_image=user.profile_image,
+        phone=user.phone,
+        email_notifications=user.email_notifications,
     )
     db.add(db_user)
     db.commit()
@@ -55,7 +61,12 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         )
     hashed_password = get_password_hash(user.password)
     db_user = User(
-        email=user.email, hashed_password=hashed_password, full_name=user.full_name
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name,
+        profile_image=user.profile_image,
+        phone=user.phone,
+        email_notifications=user.email_notifications,
     )
     db.add(db_user)
     db.commit()
@@ -81,6 +92,10 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # 마지막 로그인 시간 업데이트
+    user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
+
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -98,12 +113,13 @@ def update_user_me(
     db: Session = Depends(get_db),
 ):
     """현재 로그인한 사용자 정보 수정"""
-    if user_update.email:
-        current_user.email = user_update.email
-    if user_update.password:
-        current_user.hashed_password = get_password_hash(user_update.password)
-    if user_update.full_name:
-        current_user.full_name = user_update.full_name
+    update_data = user_update.model_dump(exclude_unset=True)
+
+    if "password" in update_data:
+        current_user.hashed_password = get_password_hash(update_data.pop("password"))
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
 
     db.commit()
     db.refresh(current_user)
