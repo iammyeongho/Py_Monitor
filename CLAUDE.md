@@ -866,6 +866,11 @@ git commit -m "refactor: 중복 코드 제거 및 서비스 분리"
 git commit -m "🐛 fix bug"           # 이모지 사용 금지
 git commit -m "Fixed stuff"          # 모호한 설명
 git commit -m "WIP"                  # 작업 중 커밋
+
+# AI 도구 사용 시 주의사항
+# - AI가 생성한 워터마크, 서명 포함 금지 (예: "Generated with...", "Co-Authored-By: AI...")
+# - 커밋 메시지는 사람이 작성한 것처럼 자연스럽게 작성
+# - 이모지, AI 관련 태그, 자동 생성 문구 모두 제외
 ```
 
 ### 15.3 브랜치 전략
