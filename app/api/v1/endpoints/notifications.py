@@ -15,6 +15,7 @@ Laravel과의 주요 차이점:
 3. HTTPException = Laravel의 abort()와 유사
 """
 
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -23,28 +24,33 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, get_db
 from app.models.notification import Notification
 from app.models.project import Project
+from app.schemas.notification import (
+    NotificationCreate,
+    NotificationResponse,
+    NotificationUpdate,
+)
 
 router = APIRouter()
 
 
-@router.post("/", response_model=dict)
+@router.post("/", response_model=NotificationResponse)
 def create_notification(
-    notification: dict,
+    notification: NotificationCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """새로운 알림을 생성합니다."""
-    project = db.query(Project).filter(Project.id == notification["project_id"]).first()
+    project = db.query(Project).filter(Project.id == notification.project_id).first()
     if not project or project.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Project not found")
-    notif = Notification(**notification)
+    notif = Notification(**notification.model_dump())
     db.add(notif)
     db.commit()
     db.refresh(notif)
-    return notif.__dict__
+    return notif
 
 
-@router.get("/project/{project_id}", response_model=List[dict])
+@router.get("/project/{project_id}", response_model=List[NotificationResponse])
 def get_notifications_by_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -54,11 +60,16 @@ def get_notifications_by_project(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project or project.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Project not found")
-    notifs = db.query(Notification).filter(Notification.project_id == project_id).all()
-    return [n.__dict__ for n in notifs]
+    notifs = (
+        db.query(Notification)
+        .filter(Notification.project_id == project_id)
+        .order_by(Notification.created_at.desc())
+        .all()
+    )
+    return notifs
 
 
-@router.get("/unread", response_model=List[dict])
+@router.get("/unread", response_model=List[NotificationResponse])
 def get_unread_notifications(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
@@ -67,12 +78,13 @@ def get_unread_notifications(
         db.query(Notification)
         .join(Project)
         .filter(Project.user_id == current_user.id, Notification.is_read.is_(False))
+        .order_by(Notification.created_at.desc())
         .all()
     )
-    return [n.__dict__ for n in notifs]
+    return notifs
 
 
-@router.get("/{notification_id}", response_model=dict)
+@router.get("/{notification_id}", response_model=NotificationResponse)
 def get_notification(
     notification_id: int,
     db: Session = Depends(get_db),
@@ -87,13 +99,13 @@ def get_notification(
     )
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
-    return notif.__dict__
+    return notif
 
 
-@router.put("/{notification_id}", response_model=dict)
+@router.put("/{notification_id}", response_model=NotificationResponse)
 def update_notification(
     notification_id: int,
-    notification: dict,
+    notification: NotificationUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -106,11 +118,19 @@ def update_notification(
     )
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
-    for key, value in notification.items():
+
+    update_data = notification.model_dump(exclude_unset=True)
+
+    # 읽음 처리 시 read_at 자동 설정
+    if update_data.get("is_read") is True and notif.is_read is False:
+        update_data["read_at"] = datetime.now(timezone.utc)
+
+    for key, value in update_data.items():
         setattr(notif, key, value)
+
     db.commit()
     db.refresh(notif)
-    return notif.__dict__
+    return notif
 
 
 @router.delete("/{notification_id}", response_model=dict)
@@ -130,7 +150,7 @@ def delete_notification(
         raise HTTPException(status_code=404, detail="Notification not found")
     db.delete(notif)
     db.commit()
-    return {"id": notification_id}
+    return {"id": notification_id, "message": "Notification deleted"}
 
 
 @router.put("/mark-all-read", response_model=dict)
@@ -138,14 +158,16 @@ def mark_all_as_read(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
     """현재 사용자의 모든 알림을 읽음 처리합니다."""
+    now = datetime.now(timezone.utc)
     notifs = (
         db.query(Notification)
         .join(Project)
         .filter(Project.user_id == current_user.id, Notification.is_read.is_(False))
         .all()
     )
+    count = len(notifs)
     for notif in notifs:
         notif.is_read = True
-        notif.read_at = None
+        notif.read_at = now
     db.commit()
-    return {"message": "All notifications marked as read"}
+    return {"message": f"{count} notifications marked as read"}

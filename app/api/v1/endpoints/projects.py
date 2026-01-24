@@ -17,27 +17,34 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_db
 from app.core.security import get_current_user
 from app.models.project import Project
-from app.schemas.project import Project as ProjectSchema
-from app.schemas.project import ProjectCreate
+from app.schemas.project import (
+    ProjectCreate,
+    ProjectResponse,
+    ProjectUpdate,
+)
 
 router = APIRouter()
 
 
-@router.post("/", response_model=ProjectSchema)
+@router.post("/", response_model=ProjectResponse)
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
     """새로운 프로젝트를 생성합니다."""
-    db_project = Project(**project.dict(), user_id=current_user.id)
+    project_data = project.model_dump()
+    # HttpUrl을 문자열로 변환
+    if "url" in project_data:
+        project_data["url"] = str(project_data["url"])
+    db_project = Project(**project_data, user_id=current_user.id)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     return db_project
 
 
-@router.get("/", response_model=List[ProjectSchema])
+@router.get("/", response_model=List[ProjectResponse])
 def read_projects(
     skip: int = 0,
     limit: int = 100,
@@ -48,6 +55,7 @@ def read_projects(
     projects = (
         db.query(Project)
         .filter(Project.user_id == current_user.id, Project.is_active.is_(True))
+        .order_by(Project.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
@@ -55,7 +63,7 @@ def read_projects(
     return projects
 
 
-@router.get("/{project_id}", response_model=ProjectSchema)
+@router.get("/{project_id}", response_model=ProjectResponse)
 def read_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -78,10 +86,10 @@ def read_project(
     return db_project
 
 
-@router.put("/{project_id}", response_model=ProjectSchema)
+@router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
     project_id: int,
-    project: ProjectCreate,
+    project: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -99,14 +107,21 @@ def update_project(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
-    for key, value in project.dict().items():
+
+    update_data = project.model_dump(exclude_unset=True)
+    # HttpUrl을 문자열로 변환
+    if "url" in update_data:
+        update_data["url"] = str(update_data["url"])
+
+    for key, value in update_data.items():
         setattr(db_project, key, value)
+
     db.commit()
     db.refresh(db_project)
     return db_project
 
 
-@router.delete("/{project_id}", response_model=ProjectSchema)
+@router.delete("/{project_id}", response_model=ProjectResponse)
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
