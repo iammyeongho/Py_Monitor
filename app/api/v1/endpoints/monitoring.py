@@ -25,6 +25,8 @@ from app.schemas.monitoring import (
     ContentCheckResponse,
     DNSLookupRequest,
     DNSLookupResponse,
+    MonitoringAlertResponse,
+    MonitoringLogResponse,
     MonitoringResponse,
     MonitoringSettingCreate,
     MonitoringSettingResponse,
@@ -367,3 +369,73 @@ async def check_security_headers(
         timeout=request.timeout,
     )
     return result
+
+
+# =====================
+# 모니터링 로그 엔드포인트
+# =====================
+
+
+@router.get("/logs/{project_id}", response_model=List[MonitoringLogResponse])
+def get_monitoring_logs(
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트의 모니터링 로그를 조회합니다."""
+    from app.models.monitoring import MonitoringLog
+
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    logs = (
+        db.query(MonitoringLog)
+        .filter(MonitoringLog.project_id == project_id)
+        .order_by(MonitoringLog.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return logs
+
+
+# =====================
+# 모니터링 알림 엔드포인트
+# =====================
+
+
+@router.get("/alerts/{project_id}", response_model=List[MonitoringAlertResponse])
+def get_monitoring_alerts(
+    project_id: int,
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트의 모니터링 알림을 조회합니다."""
+    from app.models.monitoring import MonitoringAlert
+
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    alerts = (
+        db.query(MonitoringAlert)
+        .filter(MonitoringAlert.project_id == project_id)
+        .order_by(MonitoringAlert.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return alerts
