@@ -3,63 +3,116 @@ const auth = {
     // 로그인 함수
     async login(email, password) {
         try {
+            // OAuth2 스펙에 따라 form data로 전송
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
             const response = await fetch('/api/v1/auth/login', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ email, password }),
+                body: formData,
             });
-            
+
             if (!response.ok) {
-                throw new Error('로그인에 실패했습니다.');
+                const error = await response.json();
+                throw new Error(error.detail || '로그인에 실패했습니다.');
             }
-            
+
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
-            window.location.href = '/index.html';
+
+            // 사용자 정보 가져오기
+            await this.fetchAndStoreUser();
+
+            window.location.href = '/frontend/html/index.html';
         } catch (error) {
             console.error('로그인 오류:', error);
-            alert(error.message);
+            throw error;
         }
     },
-    
+
+    // 사용자 정보 가져오기
+    async fetchAndStoreUser() {
+        try {
+            const response = await fetch('/api/v1/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                },
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+                localStorage.setItem('user', JSON.stringify(user));
+            }
+        } catch (error) {
+            console.error('사용자 정보 조회 오류:', error);
+        }
+    },
+
+    // 저장된 사용자 정보 가져오기
+    getUser() {
+        const userStr = localStorage.getItem('user');
+        return userStr ? JSON.parse(userStr) : null;
+    },
+
     // 회원가입 함수
-    async register(email, password, name) {
+    async register(email, password, fullName) {
         try {
             const response = await fetch('/api/v1/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password, name }),
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    full_name: fullName
+                }),
             });
-            
+
             if (!response.ok) {
-                throw new Error('회원가입에 실패했습니다.');
+                const error = await response.json();
+                throw new Error(error.detail || '회원가입에 실패했습니다.');
             }
-            
-            alert('회원가입이 완료되었습니다. 로그인해주세요.');
-            window.location.href = '/login.html';
+
+            return await response.json();
         } catch (error) {
             console.error('회원가입 오류:', error);
-            alert(error.message);
+            throw error;
         }
     },
-    
+
     // 로그아웃 함수
     logout() {
         localStorage.removeItem('token');
-        window.location.href = '/login.html';
+        localStorage.removeItem('user');
+        window.location.href = '/frontend/html/login.html';
     },
-    
+
     // 토큰 확인 함수
     checkAuth() {
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/login.html';
+            window.location.href = '/frontend/html/login.html';
             return false;
         }
         return true;
+    },
+
+    // 토큰 가져오기
+    getToken() {
+        return localStorage.getItem('token');
+    },
+
+    // 인증 헤더 가져오기
+    getAuthHeaders() {
+        const token = this.getToken();
+        return {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+        };
     }
-}; 
+};

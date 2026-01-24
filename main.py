@@ -102,7 +102,19 @@ def health_check():
 @app.get("/")
 def root():
     """루트 경로를 대시보드로 리다이렉트"""
-    return RedirectResponse(url="/index.html")
+    return RedirectResponse(url="/frontend/html/index.html")
+
+
+@app.get("/index.html")
+def index_redirect():
+    """index.html을 실제 경로로 리다이렉트"""
+    return RedirectResponse(url="/frontend/html/index.html")
+
+
+@app.get("/login.html")
+def login_redirect():
+    """login.html을 실제 경로로 리다이렉트"""
+    return RedirectResponse(url="/frontend/html/login.html")
 
 
 # 정적 파일 제공 설정 (API 라우터 이후에 마운트)
@@ -110,7 +122,6 @@ app.mount("/frontend", StaticFiles(directory="frontend"), name="frontend")
 app.mount(
     "/test_frontend", StaticFiles(directory="tests/test_frontend"), name="test_frontend"
 )
-app.mount("/static", StaticFiles(directory="frontend/html", html=True), name="static_html")
 
 
 if __name__ == "__main__":
