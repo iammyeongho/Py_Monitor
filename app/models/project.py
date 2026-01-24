@@ -57,6 +57,7 @@ class Project(Base):
     ip_address = Column(String(45))  # IPv6 대응
     url = Column(String(255))  # 모니터링 URL
     title = Column(String(255))  # 프로젝트 제목
+    description = Column(String(500), nullable=True)  # 프로젝트 설명
     open_date = Column(DateTime, default=func.now())
     snapshot_path = Column(String(255))  # 스냅샷 경로
     last_snapshot_at = Column(DateTime, default=func.now())  # 마지막 스냅샷 시간

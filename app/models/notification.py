@@ -35,9 +35,13 @@ class Notification(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
     type = Column(String(50))  # email, webhook 등
+    title = Column(String(255), nullable=True)  # 알림 제목
+    severity = Column(String(20), default="info")  # 심각도: info, warning, error, critical
     recipient = Column(String(255))  # 이메일 주소 또는 웹훅 URL
     message = Column(Text)
     is_read = Column(Boolean, default=False)
+    is_sent = Column(Boolean, default=False)  # 발송 여부
+    sent_at = Column(DateTime(timezone=True), nullable=True)  # 발송 시간
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     read_at = Column(DateTime(timezone=True), nullable=True)
 

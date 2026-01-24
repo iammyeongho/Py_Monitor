@@ -26,8 +26,12 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     full_name = Column(String)
+    profile_image = Column(String(255), nullable=True)  # 프로필 이미지 URL
+    phone = Column(String(20), nullable=True)  # 연락처
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    email_notifications = Column(Boolean, default=True)  # 이메일 알림 설정
+    last_login_at = Column(DateTime(timezone=True), nullable=True)  # 마지막 로그인 시간
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

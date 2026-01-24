@@ -48,8 +48,11 @@ class SSLDomainStatus(Base):
     )  # Laravel의 foreign()와 유사
     domain = Column(String(255), nullable=False)  # 도메인 주소
     ssl_status = Column(Boolean)  # SSL 상태
+    ssl_issuer = Column(String(255), nullable=True)  # SSL 발급 기관
     ssl_expiry = Column(DateTime)  # SSL 만료일
     domain_expiry = Column(DateTime)  # 도메인 만료일
+    last_checked_at = Column(DateTime, nullable=True)  # 마지막 확인 시간
+    check_error = Column(String(500), nullable=True)  # 확인 오류 메시지
     created_at = Column(DateTime, default=func.now())  # Laravel의 $timestamps
     updated_at = Column(
         DateTime, default=func.now(), onupdate=func.now()

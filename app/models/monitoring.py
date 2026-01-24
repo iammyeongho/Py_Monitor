@@ -111,10 +111,13 @@ class MonitoringSetting(Base):
     project_id = Column(
         Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
     )  # Laravel의 foreign()와 유사
-    check_interval = Column(Integer)  # 체크 주기 (초)
-    timeout = Column(Integer)  # 타임아웃 (초)
-    retry_count = Column(Integer)  # 재시도 횟수
-    alert_threshold = Column(Integer)  # 알림 임계값
+    check_interval = Column(Integer, default=300)  # 체크 주기 (초)
+    timeout = Column(Integer, default=30)  # 타임아웃 (초)
+    retry_count = Column(Integer, default=3)  # 재시도 횟수
+    alert_threshold = Column(Integer, default=3)  # 알림 임계값
+    is_alert_enabled = Column(Boolean, default=True)  # 알림 활성화 여부
+    alert_email = Column(String(255), nullable=True)  # 알림 이메일
+    webhook_url = Column(String(500), nullable=True)  # 웹훅 URL
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
     updated_at = Column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
