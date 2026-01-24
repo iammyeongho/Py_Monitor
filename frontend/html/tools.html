@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모니터링 도구 | PyMonitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/frontend/style/style.css">
+</head>
+<body>
+  <!-- 헤더 -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="index.html" class="logo">PyMonitor</a>
+      <nav class="nav">
+        <a href="index.html" class="nav-link">대시보드</a>
+        <a href="project.html" class="nav-link">프로젝트 등록</a>
+        <a href="tools.html" class="nav-link active">도구</a>
+      </nav>
+      <div class="user-actions">
+        <span class="user-name" id="user-name"></span>
+        <button class="btn btn-secondary btn-sm" id="logout-btn">로그아웃</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 컨텐츠 -->
+  <main class="main-content">
+    <div class="container">
+      <!-- 페이지 타이틀 -->
+      <div class="page-header">
+        <h1 class="page-title">모니터링 도구</h1>
+      </div>
+
+      <!-- 도구 탭 -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tcp">TCP 포트 체크</button>
+        <button class="tab-btn" data-tab="dns">DNS 조회</button>
+        <button class="tab-btn" data-tab="content">콘텐츠 검증</button>
+        <button class="tab-btn" data-tab="security">보안 헤더</button>
+      </div>
+
+      <!-- TCP 포트 체크 -->
+      <div class="tab-content active" id="tab-tcp">
+        <div class="tool-card">
+          <h3 class="tool-title">TCP 포트 체크</h3>
+          <p class="tool-description">서버의 특정 포트가 열려있는지 확인합니다.</p>
+
+          <form id="tcp-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="tcp-host">호스트</label>
+                <input type="text" class="form-input" id="tcp-host" placeholder="example.com" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="tcp-port">포트</label>
+                <input type="number" class="form-input" id="tcp-port" min="1" max="65535" value="80" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="tcp-timeout">타임아웃 (초)</label>
+                <input type="number" class="form-input" id="tcp-timeout" min="1" max="30" value="5">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">체크</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="tcp-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- DNS 조회 -->
+      <div class="tab-content" id="tab-dns">
+        <div class="tool-card">
+          <h3 class="tool-title">DNS 조회</h3>
+          <p class="tool-description">도메인의 DNS 레코드를 조회합니다.</p>
+
+          <form id="dns-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="dns-domain">도메인</label>
+                <input type="text" class="form-input" id="dns-domain" placeholder="example.com" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="dns-type">레코드 타입</label>
+                <select class="form-input" id="dns-type">
+                  <option value="A">A (IPv4)</option>
+                  <option value="AAAA">AAAA (IPv6)</option>
+                  <option value="CNAME">CNAME</option>
+                  <option value="MX">MX (메일)</option>
+                  <option value="NS">NS (네임서버)</option>
+                  <option value="TXT">TXT</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">조회</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="dns-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- 콘텐츠 검증 -->
+      <div class="tab-content" id="tab-content">
+        <div class="tool-card">
+          <h3 class="tool-title">콘텐츠 검증</h3>
+          <p class="tool-description">웹 페이지에 특정 문자열이 포함되어 있는지 확인합니다.</p>
+
+          <form id="content-form" class="tool-form">
+            <div class="form-group">
+              <label class="form-label" for="content-url">URL</label>
+              <input type="url" class="form-input" id="content-url" placeholder="https://example.com" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="content-expected">검증할 문자열</label>
+              <input type="text" class="form-input" id="content-expected" placeholder="Welcome" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="content-timeout">타임아웃 (초)</label>
+              <input type="number" class="form-input" id="content-timeout" min="5" max="120" value="30">
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">검증</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="content-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- 보안 헤더 체크 -->
+      <div class="tab-content" id="tab-security">
+        <div class="tool-card">
+          <h3 class="tool-title">보안 헤더 체크</h3>
+          <p class="tool-description">웹사이트의 HTTP 보안 헤더를 분석하고 점수를 매깁니다.</p>
+
+          <form id="security-form" class="tool-form">
+            <div class="form-group">
+              <label class="form-label" for="security-url">URL</label>
+              <input type="url" class="form-input" id="security-url" placeholder="https://example.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">분석</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="security-result" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 토스트 알림 컨테이너 -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript -->
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/monitoring.js"></script>
+  <script>
+    // 페이지 로드 시 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!auth.checkAuth()) return;
+      displayUserInfo();
+      setupEventListeners();
+    });
+
+    function displayUserInfo() {
+      const user = auth.getUser();
+      if (user) {
+        document.getElementById('user-name').textContent = user.full_name || user.email;
+      }
+    }
+
+    function setupEventListeners() {
+      // 로그아웃
+      document.getElementById('logout-btn').addEventListener('click', () => auth.logout());
+
+      // 탭 전환
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tabId = btn.dataset.tab;
+
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+          btn.classList.add('active');
+          document.getElementById(`tab-${tabId}`).classList.add('active');
+        });
+      });
+
+      // TCP 포트 체크
+      document.getElementById('tcp-form').addEventListener('submit', handleTcpCheck);
+
+      // DNS 조회
+      document.getElementById('dns-form').addEventListener('submit', handleDnsLookup);
+
+      // 콘텐츠 검증
+      document.getElementById('content-form').addEventListener('submit', handleContentCheck);
+
+      // 보안 헤더 체크
+      document.getElementById('security-form').addEventListener('submit', handleSecurityCheck);
+    }
+
+    // TCP 포트 체크
+    async function handleTcpCheck(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('tcp-result');
+
+      setLoading(btn, true);
+
+      try {
+        const result = await monitoring.checkTCPPort(
+          document.getElementById('tcp-host').value,
+          parseInt(document.getElementById('tcp-port').value),
+          parseInt(document.getElementById('tcp-timeout').value)
+        );
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${result.is_open ? 'result-success' : 'result-error'}">
+            <span class="result-icon">${result.is_open ? '✓' : '✗'}</span>
+            <span class="result-title">${result.host}:${result.port}</span>
+            <span class="result-status">${result.is_open ? '열림' : '닫힘'}</span>
+          </div>
+          <div class="result-details">
+            ${result.response_time ? `<div class="result-row"><span>응답 시간</span><span>${Math.round(result.response_time * 1000)}ms</span></div>` : ''}
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+            <div class="result-row"><span>체크 시간</span><span>${formatDateTime(result.checked_at)}</span></div>
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // DNS 조회
+    async function handleDnsLookup(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('dns-result');
+
+      setLoading(btn, true);
+
+      try {
+        const result = await monitoring.checkDNS(
+          document.getElementById('dns-domain').value,
+          document.getElementById('dns-type').value
+        );
+
+        let recordsHtml = '';
+        if (result.records && result.records.length > 0) {
+          recordsHtml = result.records.map(r => `
+            <div class="result-row">
+              <span class="record-type">${r.record_type}</span>
+              <span class="record-value">${escapeHtml(r.value)}</span>
+              ${r.ttl ? `<span class="record-ttl">TTL: ${r.ttl}</span>` : ''}
+            </div>
+          `).join('');
+        } else {
+          recordsHtml = '<div class="result-row">레코드를 찾을 수 없습니다.</div>';
+        }
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${result.is_resolved ? 'result-success' : 'result-error'}">
+            <span class="result-icon">${result.is_resolved ? '✓' : '✗'}</span>
+            <span class="result-title">${escapeHtml(result.domain)}</span>
+            <span class="result-status">${result.is_resolved ? '조회 성공' : '조회 실패'}</span>
+          </div>
+          <div class="result-details">
+            ${recordsHtml}
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // 콘텐츠 검증
+    async function handleContentCheck(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('content-result');
+
+      setLoading(btn, true);
+
+      try {
+        const result = await monitoring.checkContent(
+          document.getElementById('content-url').value,
+          document.getElementById('content-expected').value,
+          parseInt(document.getElementById('content-timeout').value)
+        );
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${result.is_found ? 'result-success' : 'result-error'}">
+            <span class="result-icon">${result.is_found ? '✓' : '✗'}</span>
+            <span class="result-title">콘텐츠 검증</span>
+            <span class="result-status">${result.is_found ? '발견됨' : '발견되지 않음'}</span>
+          </div>
+          <div class="result-details">
+            <div class="result-row"><span>URL</span><span>${escapeHtml(result.url)}</span></div>
+            <div class="result-row"><span>검증 문자열</span><span>"${escapeHtml(result.expected_content)}"</span></div>
+            ${result.status_code ? `<div class="result-row"><span>HTTP 상태</span><span>${result.status_code}</span></div>` : ''}
+            ${result.response_time ? `<div class="result-row"><span>응답 시간</span><span>${Math.round(result.response_time * 1000)}ms</span></div>` : ''}
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // 보안 헤더 체크
+    async function handleSecurityCheck(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('security-result');
+
+      setLoading(btn, true);
+
+      try {
+        const result = await monitoring.checkSecurityHeaders(
+          document.getElementById('security-url').value
+        );
+
+        const scoreClass = result.score >= 80 ? 'score-good' : result.score >= 50 ? 'score-warning' : 'score-bad';
+
+        let headersHtml = '';
+        if (result.headers && result.headers.length > 0) {
+          headersHtml = result.headers.map(h => `
+            <div class="security-header-row ${h.is_present ? 'header-present' : 'header-missing'}">
+              <div class="header-status">${h.is_present ? '✓' : '✗'}</div>
+              <div class="header-info">
+                <div class="header-name">${escapeHtml(h.name)}</div>
+                <div class="header-desc">${escapeHtml(h.description)}</div>
+                ${h.value ? `<div class="header-value">${escapeHtml(h.value)}</div>` : ''}
+              </div>
+            </div>
+          `).join('');
+        }
+
+        resultDiv.innerHTML = `
+          <div class="result-header">
+            <div class="security-score ${scoreClass}">
+              <span class="score-value">${result.score}</span>
+              <span class="score-label">/ 100</span>
+            </div>
+          </div>
+          <div class="result-details">
+            <div class="result-row"><span>URL</span><span>${escapeHtml(result.url)}</span></div>
+            ${result.status_code ? `<div class="result-row"><span>HTTP 상태</span><span>${result.status_code}</span></div>` : ''}
+          </div>
+          <div class="security-headers-list">
+            <h4>보안 헤더 분석</h4>
+            ${headersHtml}
+          </div>
+          ${result.error_message ? `<div class="result-error-msg">${escapeHtml(result.error_message)}</div>` : ''}
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // 유틸리티
+    function setLoading(btn, loading) {
+      const text = btn.querySelector('.btn-text');
+      const spinner = btn.querySelector('.btn-loading');
+      text.style.display = loading ? 'none' : 'inline';
+      spinner.style.display = loading ? 'inline-flex' : 'none';
+      btn.disabled = loading;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDateTime(dateString) {
+      if (!dateString) return '-';
+      return new Date(dateString).toLocaleString('ko-KR');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
