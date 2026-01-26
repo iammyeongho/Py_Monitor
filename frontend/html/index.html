@@ -378,6 +378,9 @@
         // 통계 업데이트 (모니터링 데이터 포함)
         updateStatsFromProjects(projects);
 
+        // 백그라운드에서 스크린샷 캡처 시작
+        captureAllScreenshots();
+
       } catch (error) {
         console.error('프로젝트 로드 오류:', error);
         loading.innerHTML = '<p class="text-error">프로젝트를 불러오는데 실패했습니다.</p>';
@@ -452,8 +455,8 @@
         }
       }
 
-      // 썸네일 URL 생성 (외부 서비스 이용)
-      const thumbnailUrl = getThumbnailUrl(proj.url);
+      // 썸네일 URL 생성 (캐시된 이미지 우선)
+      const thumbnailUrl = getThumbnailUrl(proj.url, proj.snapshot_path);
 
       return `
         <div class="project-card" data-id="${proj.id}">
@@ -755,10 +758,50 @@
       }, 3000);
     }
 
-    // 썸네일 URL 생성 (외부 서비스 이용)
-    function getThumbnailUrl(url) {
-      // Thum.io: 전체 페이지 축소 캡처 (viewportWidth로 넓게 잡고 축소)
-      return `https://image.thum.io/get/width/800/viewportWidth/1400/noanimate/${url}`;
+    // 썸네일 URL 생성 (캐시된 로컬 이미지 우선)
+    function getThumbnailUrl(url, cachedPath) {
+      // 캐시된 스크린샷이 있으면 사용
+      if (cachedPath) {
+        return cachedPath;
+      }
+      // 캐시 없으면 placeholder 반환
+      return '/frontend/img/placeholder.svg';
+    }
+
+    // 프로젝트 스크린샷 캡처 요청 (백그라운드)
+    async function captureScreenshot(projectId) {
+      try {
+        const response = await fetch(`/api/v1/projects/${projectId}/screenshot?force=false`, {
+          headers: auth.getAuthHeaders()
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.screenshot_url;
+        }
+      } catch (error) {
+        console.error('스크린샷 캡처 오류:', error);
+      }
+      return null;
+    }
+
+    // 모든 프로젝트 스크린샷 백그라운드 캡처
+    async function captureAllScreenshots() {
+      for (const proj of projects) {
+        if (!proj.snapshot_path) {
+          const screenshotUrl = await captureScreenshot(proj.id);
+          if (screenshotUrl) {
+            proj.snapshot_path = screenshotUrl;
+            // 해당 카드만 업데이트
+            const card = document.querySelector(`.project-card[data-id="${proj.id}"]`);
+            if (card) {
+              const img = card.querySelector('.project-thumbnail img');
+              if (img) {
+                img.src = screenshotUrl;
+              }
+            }
+          }
+        }
+      }
     }
 
     // 유틸리티 함수들
