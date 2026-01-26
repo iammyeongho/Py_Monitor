@@ -42,10 +42,16 @@ class MonitoringLogResponse(BaseModel):
     page_load_time: Optional[float] = None
     first_contentful_paint: Optional[float] = None
     largest_contentful_paint: Optional[float] = None
+    time_to_first_byte: Optional[float] = None
+    cumulative_layout_shift: Optional[float] = None
+    total_blocking_time: Optional[float] = None
     js_errors: Optional[str] = None
     console_errors: Optional[int] = 0
     resource_count: Optional[int] = None
     resource_size: Optional[int] = None
+    failed_resources: Optional[int] = None
+    redirect_count: Optional[int] = None
+    js_heap_size: Optional[int] = None
     is_dom_ready: Optional[bool] = None
     is_js_healthy: Optional[bool] = None
 
@@ -329,6 +335,9 @@ class PlaywrightPerformance(BaseModel):
     page_load_time: Optional[float] = None  # ms
     first_contentful_paint: Optional[float] = None  # ms
     largest_contentful_paint: Optional[float] = None  # ms
+    time_to_first_byte: Optional[float] = None  # ms (TTFB)
+    cumulative_layout_shift: Optional[float] = None  # CLS
+    total_blocking_time: Optional[float] = None  # ms (TBT)
 
 
 class PlaywrightHealth(BaseModel):
@@ -343,6 +352,17 @@ class PlaywrightResources(BaseModel):
     """Playwright 리소스 정보"""
     count: int = 0
     size: int = 0  # bytes
+    failed: int = 0  # 실패한 리소스 개수
+
+
+class PlaywrightNetwork(BaseModel):
+    """Playwright 네트워크 정보"""
+    redirect_count: int = 0
+
+
+class PlaywrightMemory(BaseModel):
+    """Playwright 메모리 정보"""
+    js_heap_size: Optional[int] = None  # bytes
 
 
 class PlaywrightCheckResponse(BaseModel):
@@ -356,4 +376,6 @@ class PlaywrightCheckResponse(BaseModel):
     performance: PlaywrightPerformance = Field(default_factory=PlaywrightPerformance)
     health: PlaywrightHealth = Field(default_factory=PlaywrightHealth)
     resources: PlaywrightResources = Field(default_factory=PlaywrightResources)
+    network: PlaywrightNetwork = Field(default_factory=PlaywrightNetwork)
+    memory: PlaywrightMemory = Field(default_factory=PlaywrightMemory)
     checked_at: datetime = Field(default_factory=datetime.now)

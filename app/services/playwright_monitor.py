@@ -33,6 +33,9 @@ class PlaywrightMetrics:
     page_load_time: Optional[float] = None  # ms
     first_contentful_paint: Optional[float] = None  # ms
     largest_contentful_paint: Optional[float] = None  # ms
+    time_to_first_byte: Optional[float] = None  # ms (TTFB)
+    cumulative_layout_shift: Optional[float] = None  # CLS
+    total_blocking_time: Optional[float] = None  # ms (TBT)
 
     # JavaScript 건강 상태
     js_errors: List[str] = None
@@ -42,6 +45,13 @@ class PlaywrightMetrics:
     # 리소스 정보
     resource_count: int = 0
     resource_size: int = 0  # bytes
+    failed_resources: int = 0  # 로드 실패한 리소스 개수
+
+    # 네트워크 정보
+    redirect_count: int = 0  # 리다이렉트 횟수
+
+    # 메모리 정보
+    js_heap_size: Optional[int] = None  # bytes
 
     # DOM 상태
     is_dom_ready: bool = False
@@ -88,11 +98,26 @@ class PlaywrightMonitorService:
 
                 # 리소스 추적
                 resources = []
-                page.on('response', lambda response: resources.append({
-                    'url': response.url,
-                    'status': response.status,
-                    'size': 0  # 실제 크기는 나중에 계산
-                }))
+                failed_resources = []
+
+                def track_response(response):
+                    resources.append({
+                        'url': response.url,
+                        'status': response.status,
+                        'size': 0
+                    })
+                    # 실패한 리소스 추적 (4xx, 5xx)
+                    if response.status >= 400:
+                        failed_resources.append({
+                            'url': response.url,
+                            'status': response.status
+                        })
+
+                page.on('response', track_response)
+
+                # 리다이렉트 추적
+                redirect_chain = []
+                page.on('request', lambda req: redirect_chain.append(req.url) if req.redirected_from else None)
 
                 try:
                     # 페이지 로드
@@ -115,9 +140,11 @@ class PlaywrightMonitorService:
                             const timing = performance.timing;
                             const paintEntries = performance.getEntriesByType('paint');
                             const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+                            const layoutShiftEntries = performance.getEntriesByType('layout-shift');
 
                             let fcp = null;
                             let lcp = null;
+                            let cls = 0;
 
                             for (const entry of paintEntries) {
                                 if (entry.name === 'first-contentful-paint') {
@@ -129,11 +156,23 @@ class PlaywrightMonitorService:
                                 lcp = lcpEntries[lcpEntries.length - 1].startTime;
                             }
 
+                            // CLS 계산 (hadRecentInput이 false인 것만)
+                            for (const entry of layoutShiftEntries) {
+                                if (!entry.hadRecentInput) {
+                                    cls += entry.value;
+                                }
+                            }
+
+                            // TTFB 계산
+                            const ttfb = timing.responseStart - timing.requestStart;
+
                             return {
                                 domContentLoaded: timing.domContentLoadedEventEnd - timing.navigationStart,
                                 pageLoadTime: timing.loadEventEnd - timing.navigationStart,
                                 fcp: fcp,
-                                lcp: lcp
+                                lcp: lcp,
+                                ttfb: ttfb,
+                                cls: cls
                             };
                         }''')
 
@@ -141,9 +180,26 @@ class PlaywrightMonitorService:
                         metrics.page_load_time = performance.get('pageLoadTime')
                         metrics.first_contentful_paint = performance.get('fcp')
                         metrics.largest_contentful_paint = performance.get('lcp')
+                        metrics.time_to_first_byte = performance.get('ttfb')
+                        metrics.cumulative_layout_shift = performance.get('cls')
 
                     except Exception as perf_error:
                         print(f"Performance 메트릭 수집 실패: {perf_error}")
+
+                    # 메모리 사용량 수집
+                    try:
+                        memory_info = await page.evaluate('''() => {
+                            if (performance.memory) {
+                                return {
+                                    jsHeapSize: performance.memory.usedJSHeapSize
+                                };
+                            }
+                            return null;
+                        }''')
+                        if memory_info:
+                            metrics.js_heap_size = memory_info.get('jsHeapSize')
+                    except Exception as mem_error:
+                        print(f"메모리 정보 수집 실패: {mem_error}")
 
                     # DOM 상태 확인 (body 존재 여부)
                     try:
@@ -159,6 +215,10 @@ class PlaywrightMonitorService:
 
                     # 리소스 정보
                     metrics.resource_count = len(resources)
+                    metrics.failed_resources = len(failed_resources)
+
+                    # 리다이렉트 횟수
+                    metrics.redirect_count = len(redirect_chain)
 
                     # 전체 가용성 판단 (HTTP OK + DOM Ready + JS Healthy)
                     if metrics.is_available:
@@ -214,10 +274,16 @@ class PlaywrightMonitorService:
             page_load_time=metrics.page_load_time,
             first_contentful_paint=metrics.first_contentful_paint,
             largest_contentful_paint=metrics.largest_contentful_paint,
+            time_to_first_byte=metrics.time_to_first_byte,
+            cumulative_layout_shift=metrics.cumulative_layout_shift,
+            total_blocking_time=metrics.total_blocking_time,
             js_errors=json.dumps(metrics.js_errors) if metrics.js_errors else None,
             console_errors=metrics.console_errors,
             resource_count=metrics.resource_count,
             resource_size=metrics.resource_size,
+            failed_resources=metrics.failed_resources,
+            redirect_count=metrics.redirect_count,
+            js_heap_size=metrics.js_heap_size,
             is_dom_ready=metrics.is_dom_ready,
             is_js_healthy=metrics.is_js_healthy,
             created_at=datetime.now(timezone.utc)
@@ -236,7 +302,10 @@ class PlaywrightMonitorService:
                 "dom_content_loaded": metrics.dom_content_loaded,
                 "page_load_time": metrics.page_load_time,
                 "first_contentful_paint": metrics.first_contentful_paint,
-                "largest_contentful_paint": metrics.largest_contentful_paint
+                "largest_contentful_paint": metrics.largest_contentful_paint,
+                "time_to_first_byte": metrics.time_to_first_byte,
+                "cumulative_layout_shift": metrics.cumulative_layout_shift,
+                "total_blocking_time": metrics.total_blocking_time
             },
             "health": {
                 "is_dom_ready": metrics.is_dom_ready,
@@ -246,6 +315,13 @@ class PlaywrightMonitorService:
             },
             "resources": {
                 "count": metrics.resource_count,
-                "size": metrics.resource_size
+                "size": metrics.resource_size,
+                "failed": metrics.failed_resources
+            },
+            "network": {
+                "redirect_count": metrics.redirect_count
+            },
+            "memory": {
+                "js_heap_size": metrics.js_heap_size
             }
         }

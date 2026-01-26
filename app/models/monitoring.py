@@ -44,10 +44,16 @@ class MonitoringLog(Base):
     # - page_load_time: 전체 페이지 로드 시간 (ms)
     # - first_contentful_paint: FCP (ms)
     # - largest_contentful_paint: LCP (ms)
+    # - time_to_first_byte: TTFB (ms)
+    # - cumulative_layout_shift: CLS (레이아웃 변경 지표)
+    # - total_blocking_time: TBT (ms)
     # - js_errors: JavaScript 에러 목록 (JSON)
     # - console_errors: 콘솔 에러 개수
     # - resource_count: 로드된 리소스 개수
     # - resource_size: 총 리소스 크기 (bytes)
+    # - failed_resources: 실패한 리소스 개수
+    # - redirect_count: 리다이렉트 횟수
+    # - js_heap_size: JS 힙 메모리 (bytes)
     # - is_dom_ready: DOM 정상 로드 여부
     # - is_js_healthy: JS 에러 없음 여부
     # - check_type: 체크 유형 (http, playwright)
@@ -70,10 +76,16 @@ class MonitoringLog(Base):
     page_load_time = Column(Float, nullable=True)  # 전체 페이지 로드 시간 (ms)
     first_contentful_paint = Column(Float, nullable=True)  # FCP (ms)
     largest_contentful_paint = Column(Float, nullable=True)  # LCP (ms)
+    time_to_first_byte = Column(Float, nullable=True)  # TTFB (ms)
+    cumulative_layout_shift = Column(Float, nullable=True)  # CLS
+    total_blocking_time = Column(Float, nullable=True)  # TBT (ms)
     js_errors = Column(Text, nullable=True)  # JS 에러 목록 (JSON)
     console_errors = Column(Integer, default=0)  # 콘솔 에러 개수
     resource_count = Column(Integer, nullable=True)  # 로드된 리소스 개수
     resource_size = Column(Integer, nullable=True)  # 총 리소스 크기 (bytes)
+    failed_resources = Column(Integer, nullable=True)  # 실패한 리소스 개수
+    redirect_count = Column(Integer, nullable=True)  # 리다이렉트 횟수
+    js_heap_size = Column(Integer, nullable=True)  # JS 힙 메모리 (bytes)
     is_dom_ready = Column(Boolean, nullable=True)  # DOM 정상 로드 여부
     is_js_healthy = Column(Boolean, nullable=True)  # JS 에러 없음 여부
 

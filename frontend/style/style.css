@@ -2073,8 +2073,12 @@ input, textarea, select {
 /* Metrics Grid */
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-sm);
+}
+
+.metrics-grid-small {
+    grid-template-columns: repeat(4, 1fr);
 }
 
 .metric-card {
@@ -2088,6 +2092,12 @@ input, textarea, select {
     font-size: var(--font-size-xs);
     color: var(--gray-500);
     margin-bottom: 2px;
+}
+
+.metric-hint {
+    font-size: 9px;
+    color: var(--gray-400);
+    margin-top: 2px;
 }
 
 .metric-value {
@@ -2179,6 +2189,10 @@ input, textarea, select {
 
 @media (max-width: 768px) {
     .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .metrics-grid-small {
         grid-template-columns: repeat(2, 1fr);
     }
 }

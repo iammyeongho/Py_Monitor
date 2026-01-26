@@ -206,6 +206,11 @@
             <h5 class="detail-subsection-title">성능 메트릭</h5>
             <div class="metrics-grid">
               <div class="metric-card">
+                <div class="metric-label">TTFB</div>
+                <div class="metric-value" id="detail-ttfb">-</div>
+                <div class="metric-hint">첫 바이트 응답</div>
+              </div>
+              <div class="metric-card">
                 <div class="metric-label">DOM 로드</div>
                 <div class="metric-value" id="detail-dom-load-time">-</div>
               </div>
@@ -216,20 +221,41 @@
               <div class="metric-card">
                 <div class="metric-label">FCP</div>
                 <div class="metric-value" id="detail-fcp">-</div>
+                <div class="metric-hint">첫 콘텐츠 표시</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">LCP</div>
                 <div class="metric-value" id="detail-lcp">-</div>
+                <div class="metric-hint">최대 콘텐츠 표시</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">CLS</div>
+                <div class="metric-value" id="detail-cls">-</div>
+                <div class="metric-hint">레이아웃 변경</div>
               </div>
             </div>
           </div>
 
-          <!-- 리소스 정보 -->
+          <!-- 리소스 & 네트워크 정보 -->
           <div class="detail-subsection">
-            <h5 class="detail-subsection-title">리소스</h5>
-            <div class="detail-row">
-              <span class="detail-label">로드된 리소스</span>
-              <span class="detail-value" id="detail-resource-count">-</span>
+            <h5 class="detail-subsection-title">리소스 & 네트워크</h5>
+            <div class="metrics-grid metrics-grid-small">
+              <div class="metric-card">
+                <div class="metric-label">로드된 리소스</div>
+                <div class="metric-value" id="detail-resource-count">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">실패한 리소스</div>
+                <div class="metric-value" id="detail-failed-resources">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">리다이렉트</div>
+                <div class="metric-value" id="detail-redirect-count">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">JS 메모리</div>
+                <div class="metric-value" id="detail-js-heap">-</div>
+              </div>
             </div>
           </div>
         </div>
@@ -898,11 +924,16 @@
       document.getElementById('detail-dom-ready').textContent = '-';
       document.getElementById('detail-js-healthy').textContent = '-';
       document.getElementById('detail-js-errors').textContent = '-';
+      document.getElementById('detail-ttfb').textContent = '-';
       document.getElementById('detail-dom-load-time').textContent = '-';
       document.getElementById('detail-page-load-time').textContent = '-';
       document.getElementById('detail-fcp').textContent = '-';
       document.getElementById('detail-lcp').textContent = '-';
+      document.getElementById('detail-cls').textContent = '-';
       document.getElementById('detail-resource-count').textContent = '-';
+      document.getElementById('detail-failed-resources').textContent = '-';
+      document.getElementById('detail-redirect-count').textContent = '-';
+      document.getElementById('detail-js-heap').textContent = '-';
     }
 
     // 심층 모니터링 UI 업데이트
@@ -939,14 +970,73 @@
       }
 
       // 성능 메트릭
+      updateMetricValue('detail-ttfb', data.time_to_first_byte, 'ms');
       updateMetricValue('detail-dom-load-time', data.dom_content_loaded, 'ms');
       updateMetricValue('detail-page-load-time', data.page_load_time, 'ms');
       updateMetricValue('detail-fcp', data.first_contentful_paint, 'ms');
       updateMetricValue('detail-lcp', data.largest_contentful_paint, 'ms');
+      updateClsValue('detail-cls', data.cumulative_layout_shift);
 
-      // 리소스
+      // 리소스 & 네트워크
       document.getElementById('detail-resource-count').textContent =
         data.resource_count !== null ? `${data.resource_count}개` : '-';
+
+      // 실패한 리소스
+      const failedResources = data.failed_resources;
+      if (failedResources !== null && failedResources !== undefined) {
+        const failedEl = document.getElementById('detail-failed-resources');
+        failedEl.textContent = `${failedResources}개`;
+        failedEl.className = 'metric-value';
+        if (failedResources === 0) {
+          failedEl.classList.add('good');
+        } else {
+          failedEl.classList.add('bad');
+        }
+      }
+
+      // 리다이렉트
+      document.getElementById('detail-redirect-count').textContent =
+        data.redirect_count !== null ? `${data.redirect_count}회` : '-';
+
+      // JS 메모리
+      if (data.js_heap_size !== null && data.js_heap_size !== undefined) {
+        const heapMB = (data.js_heap_size / 1024 / 1024).toFixed(1);
+        const heapEl = document.getElementById('detail-js-heap');
+        heapEl.textContent = `${heapMB}MB`;
+        heapEl.className = 'metric-value';
+        if (data.js_heap_size < 50 * 1024 * 1024) {
+          heapEl.classList.add('good');
+        } else if (data.js_heap_size < 100 * 1024 * 1024) {
+          heapEl.classList.add('warning');
+        } else {
+          heapEl.classList.add('bad');
+        }
+      } else {
+        document.getElementById('detail-js-heap').textContent = '-';
+      }
+    }
+
+    // CLS 값 업데이트 (성능 등급 포함)
+    function updateClsValue(elementId, value) {
+      const element = document.getElementById(elementId);
+      if (value === null || value === undefined) {
+        element.textContent = '-';
+        element.className = 'metric-value';
+        return;
+      }
+
+      const displayValue = value.toFixed(3);
+      element.textContent = displayValue;
+
+      // CLS 성능 등급 (좋음: < 0.1, 개선 필요: < 0.25, 나쁨: >= 0.25)
+      element.className = 'metric-value';
+      if (value < 0.1) {
+        element.classList.add('good');
+      } else if (value < 0.25) {
+        element.classList.add('warning');
+      } else {
+        element.classList.add('bad');
+      }
     }
 
     // 메트릭 값 업데이트 (성능 등급 포함)
@@ -993,11 +1083,16 @@
             is_dom_ready: data.health.is_dom_ready,
             is_js_healthy: data.health.is_js_healthy,
             js_errors: JSON.stringify(data.health.js_errors),
+            time_to_first_byte: data.performance.time_to_first_byte,
             dom_content_loaded: data.performance.dom_content_loaded,
             page_load_time: data.performance.page_load_time,
             first_contentful_paint: data.performance.first_contentful_paint,
             largest_contentful_paint: data.performance.largest_contentful_paint,
-            resource_count: data.resources.count
+            cumulative_layout_shift: data.performance.cumulative_layout_shift,
+            resource_count: data.resources.count,
+            failed_resources: data.resources.failed,
+            redirect_count: data.network.redirect_count,
+            js_heap_size: data.memory.js_heap_size
           });
 
           showToast('심층 체크가 완료되었습니다.', 'success');

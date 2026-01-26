@@ -33,6 +33,8 @@ from app.schemas.monitoring import (
     MonitoringSettingUpdate,
     PlaywrightCheckResponse,
     PlaywrightHealth,
+    PlaywrightMemory,
+    PlaywrightNetwork,
     PlaywrightPerformance,
     PlaywrightResources,
     SecurityHeadersRequest,
@@ -488,7 +490,10 @@ async def check_deep_monitoring(
             dom_content_loaded=metrics.dom_content_loaded,
             page_load_time=metrics.page_load_time,
             first_contentful_paint=metrics.first_contentful_paint,
-            largest_contentful_paint=metrics.largest_contentful_paint
+            largest_contentful_paint=metrics.largest_contentful_paint,
+            time_to_first_byte=metrics.time_to_first_byte,
+            cumulative_layout_shift=metrics.cumulative_layout_shift,
+            total_blocking_time=metrics.total_blocking_time
         ),
         health=PlaywrightHealth(
             is_dom_ready=metrics.is_dom_ready,
@@ -498,7 +503,14 @@ async def check_deep_monitoring(
         ),
         resources=PlaywrightResources(
             count=metrics.resource_count,
-            size=metrics.resource_size
+            size=metrics.resource_size,
+            failed=metrics.failed_resources
+        ),
+        network=PlaywrightNetwork(
+            redirect_count=metrics.redirect_count
+        ),
+        memory=PlaywrightMemory(
+            js_heap_size=metrics.js_heap_size
         ),
         checked_at=datetime.now(timezone.utc)
     )
