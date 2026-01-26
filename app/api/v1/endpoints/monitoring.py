@@ -31,6 +31,10 @@ from app.schemas.monitoring import (
     MonitoringSettingCreate,
     MonitoringSettingResponse,
     MonitoringSettingUpdate,
+    PlaywrightCheckResponse,
+    PlaywrightHealth,
+    PlaywrightPerformance,
+    PlaywrightResources,
     SecurityHeadersRequest,
     SecurityHeadersResponse,
     SSLDomainStatusCreate,
@@ -40,6 +44,7 @@ from app.schemas.monitoring import (
     TCPPortCheckResponse,
 )
 from app.services.monitoring import check_project_status, MonitoringService
+from app.services.playwright_monitor import PlaywrightMonitorService
 
 router = APIRouter()
 
@@ -439,3 +444,92 @@ def get_monitoring_alerts(
         .all()
     )
     return alerts
+
+
+# =====================
+# Playwright 심층 체크 엔드포인트
+# =====================
+
+
+@router.get("/check/deep/{project_id}", response_model=PlaywrightCheckResponse)
+async def check_deep_monitoring(
+    project_id: int,
+    save_log: bool = True,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Playwright를 사용한 심층 모니터링을 수행합니다.
+
+    HTTP 상태 코드 외에도 다음을 체크합니다:
+    - DOM 로드 상태
+    - JavaScript 에러
+    - 페이지 성능 메트릭 (FCP, LCP)
+    - 리소스 로드 상태
+    """
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    service = PlaywrightMonitorService(db)
+    metrics = await service.monitor_project(project_id, save_log=save_log)
+
+    return PlaywrightCheckResponse(
+        project_id=project_id,
+        url=str(project.url),
+        is_available=metrics.is_available,
+        status_code=metrics.status_code,
+        response_time=metrics.response_time,
+        error_message=metrics.error_message,
+        performance=PlaywrightPerformance(
+            dom_content_loaded=metrics.dom_content_loaded,
+            page_load_time=metrics.page_load_time,
+            first_contentful_paint=metrics.first_contentful_paint,
+            largest_contentful_paint=metrics.largest_contentful_paint
+        ),
+        health=PlaywrightHealth(
+            is_dom_ready=metrics.is_dom_ready,
+            is_js_healthy=metrics.is_js_healthy,
+            js_errors=metrics.js_errors or [],
+            console_errors=metrics.console_errors
+        ),
+        resources=PlaywrightResources(
+            count=metrics.resource_count,
+            size=metrics.resource_size
+        ),
+        checked_at=datetime.now(timezone.utc)
+    )
+
+
+@router.get("/logs/{project_id}/latest", response_model=MonitoringLogResponse)
+def get_latest_monitoring_log(
+    project_id: int,
+    check_type: str = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트의 최신 모니터링 로그를 조회합니다."""
+    from app.models.monitoring import MonitoringLog
+
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    query = db.query(MonitoringLog).filter(MonitoringLog.project_id == project_id)
+
+    if check_type:
+        query = query.filter(MonitoringLog.check_type == check_type)
+
+    log = query.order_by(MonitoringLog.created_at.desc()).first()
+
+    if not log:
+        raise HTTPException(status_code=404, detail="No monitoring log found")
+
+    return log

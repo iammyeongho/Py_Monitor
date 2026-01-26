@@ -38,6 +38,19 @@ class MonitoringLog(Base):
     # - is_available: 서비스 가용성
     # - error_message: 오류 메시지
     # - created_at: 로그 생성 시간 (Laravel의 $timestamps와 유사)
+    #
+    # Playwright 심층 모니터링 필드:
+    # - dom_content_loaded: DOM 로드 완료 시간 (ms)
+    # - page_load_time: 전체 페이지 로드 시간 (ms)
+    # - first_contentful_paint: FCP (ms)
+    # - largest_contentful_paint: LCP (ms)
+    # - js_errors: JavaScript 에러 목록 (JSON)
+    # - console_errors: 콘솔 에러 개수
+    # - resource_count: 로드된 리소스 개수
+    # - resource_size: 총 리소스 크기 (bytes)
+    # - is_dom_ready: DOM 정상 로드 여부
+    # - is_js_healthy: JS 에러 없음 여부
+    # - check_type: 체크 유형 (http, playwright)
     """
 
     __tablename__ = "monitoring_logs"  # Laravel의 protected $table = 'monitoring_logs'
@@ -50,6 +63,20 @@ class MonitoringLog(Base):
     response_time = Column(Float)  # 응답 시간 (초)
     is_available = Column(Boolean)  # 서비스 가용성
     error_message = Column(Text)  # 오류 메시지
+
+    # Playwright 심층 모니터링 메트릭
+    check_type = Column(String(20), default="http")  # http 또는 playwright
+    dom_content_loaded = Column(Float, nullable=True)  # DOM 로드 시간 (ms)
+    page_load_time = Column(Float, nullable=True)  # 전체 페이지 로드 시간 (ms)
+    first_contentful_paint = Column(Float, nullable=True)  # FCP (ms)
+    largest_contentful_paint = Column(Float, nullable=True)  # LCP (ms)
+    js_errors = Column(Text, nullable=True)  # JS 에러 목록 (JSON)
+    console_errors = Column(Integer, default=0)  # 콘솔 에러 개수
+    resource_count = Column(Integer, nullable=True)  # 로드된 리소스 개수
+    resource_size = Column(Integer, nullable=True)  # 총 리소스 크기 (bytes)
+    is_dom_ready = Column(Boolean, nullable=True)  # DOM 정상 로드 여부
+    is_js_healthy = Column(Boolean, nullable=True)  # JS 에러 없음 여부
+
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
 
     # 관계 설정

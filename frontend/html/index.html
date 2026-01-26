@@ -174,6 +174,65 @@
             <span class="detail-value" id="detail-domain-expiry">-</span>
           </div>
         </div>
+
+        <!-- 심층 모니터링 (Playwright) -->
+        <div class="detail-section" id="deep-monitoring-section">
+          <h4 class="detail-section-title">
+            심층 모니터링
+            <button type="button" class="btn btn-sm btn-secondary" id="run-deep-check-btn" style="margin-left: 10px; font-size: 11px;">
+              심층 체크 실행
+            </button>
+          </h4>
+
+          <!-- 페이지 건강 상태 -->
+          <div class="detail-subsection">
+            <h5 class="detail-subsection-title">페이지 건강 상태</h5>
+            <div class="detail-row">
+              <span class="detail-label">DOM 로드</span>
+              <span class="detail-value" id="detail-dom-ready">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">JS 상태</span>
+              <span class="detail-value" id="detail-js-healthy">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">JS 에러</span>
+              <span class="detail-value" id="detail-js-errors">-</span>
+            </div>
+          </div>
+
+          <!-- 성능 메트릭 -->
+          <div class="detail-subsection">
+            <h5 class="detail-subsection-title">성능 메트릭</h5>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">DOM 로드</div>
+                <div class="metric-value" id="detail-dom-load-time">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">페이지 로드</div>
+                <div class="metric-value" id="detail-page-load-time">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">FCP</div>
+                <div class="metric-value" id="detail-fcp">-</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">LCP</div>
+                <div class="metric-value" id="detail-lcp">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 리소스 정보 -->
+          <div class="detail-subsection">
+            <h5 class="detail-subsection-title">리소스</h5>
+            <div class="detail-row">
+              <span class="detail-label">로드된 리소스</span>
+              <span class="detail-value" id="detail-resource-count">-</span>
+            </div>
+          </div>
+        </div>
         </div><!-- end tab-detail-info -->
 
         <!-- 히스토리 탭 -->
@@ -316,6 +375,9 @@
 
       // 프로젝트 삭제
       document.getElementById('delete-project-btn').addEventListener('click', handleDeleteProject);
+
+      // 심층 체크 실행
+      document.getElementById('run-deep-check-btn').addEventListener('click', runDeepCheck);
 
       // 모달 외부 클릭 시 닫기
       document.querySelectorAll('.modal').forEach(modal => {
@@ -593,6 +655,9 @@
         // 도메인 정보
         document.getElementById('detail-domain-expiry').textContent = proj.domain_expiry_date ? formatDate(proj.domain_expiry_date) : '-';
 
+        // 심층 모니터링 데이터 로드
+        loadDeepMonitoringData(projectId);
+
         // 모니터링 설정 로드
         try {
           const settings = await monitoring.getSettings(projectId);
@@ -801,6 +866,151 @@
             }
           }
         }
+      }
+    }
+
+    // 심층 모니터링 데이터 로드
+    async function loadDeepMonitoringData(projectId) {
+      // 초기 상태 설정
+      resetDeepMonitoringUI();
+
+      try {
+        // 최신 Playwright 로그 조회
+        const response = await fetch(`/api/v1/monitoring/logs/${projectId}/latest?check_type=playwright`, {
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const log = await response.json();
+          updateDeepMonitoringUI(log);
+        } else if (response.status === 404) {
+          // 아직 심층 체크 기록 없음
+          document.getElementById('detail-dom-ready').innerHTML = '<span class="health-badge unknown">미확인</span>';
+          document.getElementById('detail-js-healthy').innerHTML = '<span class="health-badge unknown">미확인</span>';
+        }
+      } catch (error) {
+        console.error('심층 모니터링 데이터 로드 오류:', error);
+      }
+    }
+
+    // 심층 모니터링 UI 초기화
+    function resetDeepMonitoringUI() {
+      document.getElementById('detail-dom-ready').textContent = '-';
+      document.getElementById('detail-js-healthy').textContent = '-';
+      document.getElementById('detail-js-errors').textContent = '-';
+      document.getElementById('detail-dom-load-time').textContent = '-';
+      document.getElementById('detail-page-load-time').textContent = '-';
+      document.getElementById('detail-fcp').textContent = '-';
+      document.getElementById('detail-lcp').textContent = '-';
+      document.getElementById('detail-resource-count').textContent = '-';
+    }
+
+    // 심층 모니터링 UI 업데이트
+    function updateDeepMonitoringUI(data) {
+      // DOM 상태
+      if (data.is_dom_ready !== null) {
+        document.getElementById('detail-dom-ready').innerHTML = data.is_dom_ready
+          ? '<span class="health-badge healthy">정상</span>'
+          : '<span class="health-badge unhealthy">오류</span>';
+      }
+
+      // JS 건강 상태
+      if (data.is_js_healthy !== null) {
+        document.getElementById('detail-js-healthy').innerHTML = data.is_js_healthy
+          ? '<span class="health-badge healthy">정상</span>'
+          : '<span class="health-badge unhealthy">에러 발견</span>';
+      }
+
+      // JS 에러
+      const jsErrors = data.js_errors ? JSON.parse(data.js_errors) : [];
+      if (jsErrors.length > 0) {
+        let errorsHtml = `<span class="health-badge unhealthy">${jsErrors.length}개</span>`;
+        errorsHtml += '<div class="js-error-list">';
+        jsErrors.slice(0, 3).forEach(err => {
+          errorsHtml += `<div class="js-error-item">${escapeHtml(err.substring(0, 100))}</div>`;
+        });
+        if (jsErrors.length > 3) {
+          errorsHtml += `<div class="js-error-item">... 외 ${jsErrors.length - 3}개</div>`;
+        }
+        errorsHtml += '</div>';
+        document.getElementById('detail-js-errors').innerHTML = errorsHtml;
+      } else {
+        document.getElementById('detail-js-errors').innerHTML = '<span class="health-badge healthy">없음</span>';
+      }
+
+      // 성능 메트릭
+      updateMetricValue('detail-dom-load-time', data.dom_content_loaded, 'ms');
+      updateMetricValue('detail-page-load-time', data.page_load_time, 'ms');
+      updateMetricValue('detail-fcp', data.first_contentful_paint, 'ms');
+      updateMetricValue('detail-lcp', data.largest_contentful_paint, 'ms');
+
+      // 리소스
+      document.getElementById('detail-resource-count').textContent =
+        data.resource_count !== null ? `${data.resource_count}개` : '-';
+    }
+
+    // 메트릭 값 업데이트 (성능 등급 포함)
+    function updateMetricValue(elementId, value, unit) {
+      const element = document.getElementById(elementId);
+      if (value === null || value === undefined) {
+        element.textContent = '-';
+        element.className = 'metric-value';
+        return;
+      }
+
+      const displayValue = Math.round(value);
+      element.textContent = `${displayValue}${unit}`;
+
+      // 성능 등급 색상
+      element.className = 'metric-value';
+      if (displayValue < 1000) {
+        element.classList.add('good');
+      } else if (displayValue < 3000) {
+        element.classList.add('warning');
+      } else {
+        element.classList.add('bad');
+      }
+    }
+
+    // 심층 체크 실행
+    async function runDeepCheck() {
+      if (!currentProjectId) return;
+
+      const btn = document.getElementById('run-deep-check-btn');
+      btn.disabled = true;
+      btn.textContent = '체크 중...';
+
+      try {
+        const response = await fetch(`/api/v1/monitoring/check/deep/${currentProjectId}?save_log=true`, {
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // UI 업데이트
+          updateDeepMonitoringUI({
+            is_dom_ready: data.health.is_dom_ready,
+            is_js_healthy: data.health.is_js_healthy,
+            js_errors: JSON.stringify(data.health.js_errors),
+            dom_content_loaded: data.performance.dom_content_loaded,
+            page_load_time: data.performance.page_load_time,
+            first_contentful_paint: data.performance.first_contentful_paint,
+            largest_contentful_paint: data.performance.largest_contentful_paint,
+            resource_count: data.resources.count
+          });
+
+          showToast('심층 체크가 완료되었습니다.', 'success');
+        } else {
+          const error = await response.json();
+          showToast(error.detail || '심층 체크에 실패했습니다.', 'error');
+        }
+      } catch (error) {
+        console.error('심층 체크 오류:', error);
+        showToast('심층 체크 중 오류가 발생했습니다.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '심층 체크 실행';
       }
     }
 

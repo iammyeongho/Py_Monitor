@@ -18,9 +18,9 @@ from pydantic import BaseModel, Field
 # 모니터링 로그 스키마
 class MonitoringLogBase(BaseModel):
     project_id: int
-    status: bool
+    status_code: Optional[int] = None
     response_time: Optional[float] = None
-    http_code: Optional[int] = None
+    is_available: Optional[bool] = None
     error_message: Optional[str] = None
 
 
@@ -28,8 +28,27 @@ class MonitoringLogCreate(MonitoringLogBase):
     pass
 
 
-class MonitoringLogResponse(MonitoringLogBase):
+class MonitoringLogResponse(BaseModel):
     id: int
+    project_id: int
+    check_type: Optional[str] = "http"
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    is_available: Optional[bool] = None
+    error_message: Optional[str] = None
+
+    # Playwright 심층 모니터링 메트릭
+    dom_content_loaded: Optional[float] = None
+    page_load_time: Optional[float] = None
+    first_contentful_paint: Optional[float] = None
+    largest_contentful_paint: Optional[float] = None
+    js_errors: Optional[str] = None
+    console_errors: Optional[int] = 0
+    resource_count: Optional[int] = None
+    resource_size: Optional[int] = None
+    is_dom_ready: Optional[bool] = None
+    is_js_healthy: Optional[bool] = None
+
     created_at: datetime
 
     class Config:
@@ -300,4 +319,41 @@ class HealthCheckResponse(BaseModel):
     content_result: Optional[ContentCheckResponse] = None
     security_headers_result: Optional[SecurityHeadersResponse] = None
     overall_healthy: bool
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# Playwright 심층 체크 스키마
+class PlaywrightPerformance(BaseModel):
+    """Playwright 성능 메트릭"""
+    dom_content_loaded: Optional[float] = None  # ms
+    page_load_time: Optional[float] = None  # ms
+    first_contentful_paint: Optional[float] = None  # ms
+    largest_contentful_paint: Optional[float] = None  # ms
+
+
+class PlaywrightHealth(BaseModel):
+    """Playwright 건강 상태"""
+    is_dom_ready: Optional[bool] = None
+    is_js_healthy: Optional[bool] = None
+    js_errors: list[str] = Field(default_factory=list)
+    console_errors: int = 0
+
+
+class PlaywrightResources(BaseModel):
+    """Playwright 리소스 정보"""
+    count: int = 0
+    size: int = 0  # bytes
+
+
+class PlaywrightCheckResponse(BaseModel):
+    """Playwright 심층 체크 응답 스키마"""
+    project_id: int
+    url: str
+    is_available: bool
+    status_code: Optional[int] = None
+    response_time: float = 0.0
+    error_message: Optional[str] = None
+    performance: PlaywrightPerformance = Field(default_factory=PlaywrightPerformance)
+    health: PlaywrightHealth = Field(default_factory=PlaywrightHealth)
+    resources: PlaywrightResources = Field(default_factory=PlaywrightResources)
     checked_at: datetime = Field(default_factory=datetime.now)
