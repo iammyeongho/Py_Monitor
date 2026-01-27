@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.exceptions.handlers import register_exception_handlers
 from app.services.scheduler import MonitoringScheduler
 from app.db.session import SessionLocal
 
@@ -68,6 +69,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
 # 미들웨어 등록
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
+
+# 커스텀 예외 핸들러 등록
+register_exception_handlers(app)
 
 # API 라우터 등록 (정적 파일보다 먼저 등록)
 app.include_router(api_router, prefix=settings.API_V1_STR)

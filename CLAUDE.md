@@ -38,7 +38,17 @@ Py_Monitor/
 │   │       ├── endpoints/        # API v1 엔드포인트
 │   │       │   ├── users.py      # 사용자/인증 엔드포인트
 │   │       │   ├── projects.py   # 프로젝트 CRUD
-│   │       │   ├── monitoring.py # 모니터링 상태 조회
+│   │       │   ├── monitoring/   # 모니터링 API (모듈화)
+│   │       │   │   ├── __init__.py  # 라우터 통합
+│   │       │   │   ├── status.py    # 상태 조회 API
+│   │       │   │   ├── settings.py  # 설정 API
+│   │       │   │   ├── ssl.py       # SSL/도메인 API
+│   │       │   │   ├── checks.py    # TCP/DNS/Content/Security 체크
+│   │       │   │   ├── logs.py      # 로그 API
+│   │       │   │   ├── alerts.py    # 알림 API
+│   │       │   │   ├── scheduler.py # 스케줄러 API
+│   │       │   │   ├── cleanup.py   # 정리 API
+│   │       │   │   └── charts.py    # 차트 데이터 API
 │   │       │   └── notifications.py # 알림 관리
 │   │       └── router.py         # API 라우터 통합
 │   │
@@ -47,7 +57,11 @@ Py_Monitor/
 │   │   ├── settings.py           # 환경별 설정 헬퍼
 │   │   ├── security.py           # JWT, 비밀번호 해싱
 │   │   ├── deps.py               # 의존성 주입 (DB, 인증)
-│   │   └── logging_config.py     # 로깅 설정
+│   │   ├── logging_config.py     # 로깅 설정
+│   │   └── exceptions/           # 커스텀 예외
+│   │       ├── __init__.py       # 예외 클래스 export
+│   │       ├── base.py           # 기본 예외 클래스
+│   │       └── handlers.py       # 예외 핸들러
 │   │
 │   ├── db/                       # 데이터베이스
 │   │   ├── base.py               # 모델 임포트 집합
@@ -67,9 +81,18 @@ Py_Monitor/
 │   │   ├── monitoring.py
 │   │   └── base.py               # 공통 스키마
 │   │
-│   ├── services/                 # 비즈니스 로직
-│   │   ├── user_service.py
-│   │   ├── project_service.py
+│   ├── repositories/             # 데이터 접근 계층 (Repository 패턴)
+│   │   ├── __init__.py           # Repository export
+│   │   ├── base.py               # BaseRepository 추상 클래스
+│   │   ├── user_repository.py    # 사용자 Repository
+│   │   ├── project_repository.py # 프로젝트 Repository
+│   │   ├── monitoring_repository.py  # 모니터링 Repository
+│   │   └── notification_repository.py # 알림 Repository
+│   │
+│   ├── services/                 # 비즈니스 로직 (Application Layer)
+│   │   ├── user_service.py       # 사용자 서비스 (Repository 사용)
+│   │   ├── project_service.py    # 프로젝트 서비스 (Repository 사용)
+│   │   ├── notification_service.py # 알림 서비스 (통합)
 │   │   ├── monitoring.py         # 모니터링 서비스 (핵심)
 │   │   ├── email_service.py
 │   │   └── scheduler.py          # 백그라운드 스케줄러
@@ -81,8 +104,49 @@ Py_Monitor/
 │
 ├── frontend/                     # 프론트엔드
 │   ├── html/                     # HTML 템플릿
+│   │   ├── index.html            # 대시보드
+│   │   ├── login.html            # 로그인
+│   │   ├── register.html         # 회원가입
+│   │   ├── project.html          # 프로젝트 등록
+│   │   └── tools.html            # 도구 페이지
 │   ├── js/                       # JavaScript 모듈
-│   └── style/                    # CSS 스타일시트
+│   │   ├── core/                 # 핵심 모듈
+│   │   │   └── utils.js          # 유틸리티 함수
+│   │   ├── components/           # UI 컴포넌트
+│   │   │   ├── toast.js          # 토스트 알림
+│   │   │   ├── modal.js          # 모달 관리
+│   │   │   ├── scheduler.js      # 스케줄러 컨트롤
+│   │   │   └── chart.js          # 차트 관련
+│   │   ├── pages/                # 페이지별 로직
+│   │   │   └── dashboard.js      # 대시보드 페이지
+│   │   ├── auth.js               # 인증 관리
+│   │   ├── project.js            # 프로젝트 API
+│   │   └── monitoring.js         # 모니터링 API
+│   └── style/                    # CSS 스타일시트 (모듈화)
+│       ├── main.css              # 메인 진입점 (@import)
+│       ├── base/                 # 기본 스타일
+│       │   ├── _variables.css    # CSS 변수
+│       │   ├── _reset.css        # Reset
+│       │   └── _typography.css   # 타이포그래피
+│       ├── layout/               # 레이아웃
+│       │   ├── _header.css       # 헤더
+│       │   ├── _grid.css         # 그리드
+│       │   └── _container.css    # 컨테이너
+│       ├── components/           # 컴포넌트
+│       │   ├── _buttons.css      # 버튼
+│       │   ├── _cards.css        # 카드
+│       │   ├── _forms.css        # 폼
+│       │   ├── _modals.css       # 모달
+│       │   ├── _tables.css       # 테이블
+│       │   ├── _badges.css       # 뱃지
+│       │   ├── _charts.css       # 차트
+│       │   └── _toast.css        # 토스트
+│       ├── pages/                # 페이지별 스타일
+│       │   ├── _dashboard.css    # 대시보드
+│       │   ├── _auth.css         # 인증 페이지
+│       │   └── _tools.css        # 도구 페이지
+│       └── utilities/            # 유틸리티
+│           └── _utilities.css    # 유틸리티 클래스
 │
 ├── tests/                        # 테스트
 │   ├── test_api/                 # API 통합 테스트
@@ -110,22 +174,81 @@ Py_Monitor/
 
 ## 3. 아키텍처 패턴
 
-### 3.1 레이어드 아키텍처
+### 3.1 클린 아키텍처 (6계층)
 ```
-[API Endpoint] → [Service] → [Model/Schema] → [Database]
-     ↓               ↓              ↓
-  deps.py      비즈니스 로직    ORM/Pydantic
+┌─────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                        │
+│   app/api/v1/endpoints/    HTTP 요청/응답, 예외 → HTTP 변환  │
+├─────────────────────────────────────────────────────────────┤
+│                    Application Layer                         │
+│   app/services/            비즈니스 로직, 트랜잭션 관리       │
+├─────────────────────────────────────────────────────────────┤
+│                    Domain Layer                              │
+│   app/models/              엔티티 정의                       │
+│   app/schemas/             DTO (요청/응답 검증)              │
+├─────────────────────────────────────────────────────────────┤
+│                    Infrastructure Layer                      │
+│   app/repositories/        데이터 접근 캡슐화 (Repository)   │
+│   app/db/                  DB 세션, 연결 관리                │
+├─────────────────────────────────────────────────────────────┤
+│                    Configuration Layer                       │
+│   app/core/                설정, 보안, 의존성 주입            │
+│   app/core/exceptions/     커스텀 예외 및 핸들러              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 파일 역할 및 책임
+### 3.2 데이터 흐름
+```
+[API Endpoint] → [Service] → [Repository] → [Database]
+     ↓               ↓             ↓
+  HTTP 처리     비즈니스 규칙   데이터 접근
+  예외 변환     커스텀 예외     CRUD 캡슐화
+```
+
+### 3.3 파일 역할 및 책임
 
 | 레이어 | 파일 위치 | 역할 |
 |--------|----------|------|
-| **Endpoint** | `app/api/v1/endpoints/` | HTTP 요청 처리, 응답 반환 |
-| **Service** | `app/services/` | 비즈니스 로직, 트랜잭션 관리 |
-| **Model** | `app/models/` | 데이터베이스 테이블 정의 |
-| **Schema** | `app/schemas/` | 요청/응답 데이터 검증 |
+| **Presentation** | `app/api/v1/endpoints/` | HTTP 요청 처리, 응답 반환 |
+| **Application** | `app/services/` | 비즈니스 로직, Repository 호출 |
+| **Domain** | `app/models/` | 데이터베이스 테이블 정의 |
+| **Domain** | `app/schemas/` | 요청/응답 데이터 검증 |
+| **Infrastructure** | `app/repositories/` | 데이터 접근 로직 캡슐화 |
+| **Configuration** | `app/core/` | 설정, 보안, 예외 처리 |
 | **Utils** | `app/utils/` | 재사용 가능한 헬퍼 함수 |
+
+### 3.4 Repository 패턴 사용법
+
+```python
+# Service에서 Repository 사용 예시
+from app.repositories import UserRepository, ProjectRepository
+
+class UserService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.repository = UserRepository(db)
+
+    def get_user(self, user_id: int) -> User:
+        user = self.repository.get_by_id(user_id)
+        if not user:
+            raise NotFoundError("User", user_id)
+        return user
+```
+
+### 3.5 커스텀 예외 사용법
+
+```python
+from app.core.exceptions import NotFoundError, ConflictError, AuthenticationError
+
+# 리소스를 찾을 수 없을 때
+raise NotFoundError("User", user_id)
+
+# 중복 데이터
+raise ConflictError("이미 등록된 이메일입니다", field="email")
+
+# 인증 실패
+raise AuthenticationError("이메일 또는 비밀번호가 올바르지 않습니다")
+```
 
 ---
 
@@ -854,23 +977,42 @@ def send_email(to: str, subject: str, body: str) -> bool:
 | `test` | 테스트 추가/수정 | `test: 사용자 인증 테스트 추가` |
 | `chore` | 빌드, 패키지 등 기타 | `chore: requirements.txt 업데이트` |
 
-### 15.2 커밋 규칙
+### 15.2 커밋 규칙 (중요)
+
+**필수 규칙:**
+1. 이모지 사용 금지
+2. AI 워터마크/서명 금지
+3. 인간적이고 자연스러운 메시지 작성
 
 ```bash
 # 올바른 예시
 git commit -m "fix: SQLAlchemy Boolean 비교 수정"
 git commit -m "feat: 이메일 알림 기능 구현"
-git commit -m "refactor: 중복 코드 제거 및 서비스 분리"
+git commit -m "refactor: 모니터링 API 9개 모듈로 분리"
+git commit -m "style: CSS 17개 파일로 모듈화"
 
-# 잘못된 예시 (금지)
+# 잘못된 예시 (절대 금지)
 git commit -m "🐛 fix bug"           # 이모지 사용 금지
+git commit -m "✨ feat: 새 기능"     # 이모지 사용 금지
 git commit -m "Fixed stuff"          # 모호한 설명
 git commit -m "WIP"                  # 작업 중 커밋
 
-# AI 도구 사용 시 주의사항
-# - AI가 생성한 워터마크, 서명 포함 금지 (예: "Generated with...", "Co-Authored-By: AI...")
-# - 커밋 메시지는 사람이 작성한 것처럼 자연스럽게 작성
-# - 이모지, AI 관련 태그, 자동 생성 문구 모두 제외
+# 절대 포함하지 말 것
+# - 이모지 (🐛, ✨, 🔧, 📝 등 모든 이모지)
+# - "Generated with..." 문구
+# - "Co-Authored-By: Claude..." 또는 AI 관련 서명
+# - "🤖" 또는 AI 관련 마크
+# - 자동 생성 워터마크
+```
+
+**HEREDOC 사용 시에도 동일:**
+```bash
+git commit -m "$(cat <<'EOF'
+refactor: 백엔드 모니터링 API 모듈화
+
+monitoring.py 1034줄을 9개 모듈로 분리
+EOF
+)"
 ```
 
 ### 15.3 브랜치 전략
@@ -998,6 +1140,24 @@ app.include_router(api_v2_router, prefix="/api/v2")
 - JWT 인증 시스템 (OAuth2 password flow)
 - 모니터링 서비스 (TCP, DNS, Content, Security Headers 체크)
 - 로그 및 알림 API 엔드포인트
+- **[완료] 모니터링 API 모듈화** (monitoring.py 1034줄 → 9개 모듈)
+  - status.py, settings.py, ssl.py, checks.py, logs.py
+  - alerts.py, scheduler.py, cleanup.py, charts.py
+- **[완료] 아키텍처 검토** (7.2/10 → 개선 완료)
+
+#### 아키텍처 개선 (클린 아키텍처 적용)
+- **[완료] Repository 패턴 도입** (app/repositories/)
+  - BaseRepository: 공통 CRUD 추상 클래스
+  - UserRepository, ProjectRepository, MonitoringRepository, NotificationRepository
+- **[완료] Service 계층 리팩토링**
+  - Repository를 통한 데이터 접근
+  - 비즈니스 로직과 데이터 접근 분리
+- **[완료] 커스텀 예외 클래스** (app/core/exceptions/)
+  - NotFoundError, ValidationError, AuthenticationError, ConflictError
+  - 전역 예외 핸들러 등록
+- **[완료] 알림 로직 통합**
+  - services/notification_service.py로 통합
+  - Repository 패턴 적용
 
 #### Frontend
 - KREAM 스타일 디자인 시스템 적용
@@ -1006,6 +1166,11 @@ app.include_router(api_v2_router, prefix="/api/v2")
 - 프로젝트 등록 페이지
 - 프로젝트 상세 모달 (정보/히스토리/설정 탭)
 - 모니터링 도구 페이지 (TCP, DNS, Content, Security Headers)
+- **[완료] CSS 모듈화** (2513줄 단일 파일 → 17개 모듈)
+  - base/, layout/, components/, pages/, utilities/ 구조
+- **[완료] JavaScript 모듈화** (인라인 1160줄 → 외부 모듈)
+  - core/utils.js, components/(toast, modal, scheduler, chart).js
+  - pages/dashboard.js
 
 #### 테스트
 - pytest 기반 테스트 구성
@@ -1013,12 +1178,17 @@ app.include_router(api_v2_router, prefix="/api/v2")
 
 ### 17.2 진행 예정 작업
 
+#### 기능 구현
+- [ ] 성능 임계값 알림 구현
+- [ ] SSL/도메인 만료 알림 구현
 - [ ] 실시간 WebSocket 모니터링 구현
 - [ ] 이메일/웹훅 알림 발송 기능
 - [ ] 모니터링 스케줄러 백그라운드 작업
-- [ ] SSL 인증서 만료 체크 기능
-- [ ] 도메인 만료 체크 기능
-- [ ] 프론트엔드 차트/그래프 시각화
+
+#### 추가 개선 (선택적)
+- [ ] Repository 인터페이스 추상화 (ABC)
+- [ ] 도메인 모델에 비즈니스 메서드 추가
+- [ ] 캐싱 전략 도입 (Redis)
 
 ---
 
