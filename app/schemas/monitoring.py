@@ -395,3 +395,39 @@ class ProjectMonitoringStatus(BaseModel):
     project_id: int
     is_monitoring: bool
     consecutive_failures: int = 0
+
+
+# 차트 데이터 스키마
+class ChartDataPoint(BaseModel):
+    """차트 데이터 포인트"""
+    timestamp: datetime
+    value: Optional[float] = None
+    is_available: Optional[bool] = None
+
+
+class ResponseTimeChartData(BaseModel):
+    """응답 시간 차트 데이터"""
+    project_id: int
+    project_title: str
+    data_points: list[ChartDataPoint] = Field(default_factory=list)
+    avg_response_time: Optional[float] = None
+    min_response_time: Optional[float] = None
+    max_response_time: Optional[float] = None
+
+
+class AvailabilityChartData(BaseModel):
+    """가용성 차트 데이터"""
+    project_id: int
+    project_title: str
+    total_checks: int = 0
+    available_checks: int = 0
+    availability_percentage: float = 0.0
+    data_points: list[ChartDataPoint] = Field(default_factory=list)
+
+
+class DashboardChartData(BaseModel):
+    """대시보드 차트 데이터"""
+    response_time: list[ResponseTimeChartData] = Field(default_factory=list)
+    availability: list[AvailabilityChartData] = Field(default_factory=list)
+    period_start: datetime
+    period_end: datetime

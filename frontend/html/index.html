@@ -6,6 +6,8 @@
   <title>대시보드 | PyMonitor</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/frontend/style/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
   <!-- 헤더 -->
@@ -66,6 +68,35 @@
           <button class="btn btn-sm btn-primary" id="scheduler-start-btn" style="display: none;">스케줄러 시작</button>
           <button class="btn btn-sm btn-secondary" id="scheduler-stop-btn" style="display: none;">스케줄러 중지</button>
           <button class="btn btn-sm btn-secondary" id="scheduler-refresh-btn">새로고침</button>
+        </div>
+      </div>
+
+      <!-- 대시보드 차트 섹션 -->
+      <div class="charts-section" id="charts-section">
+        <div class="section-header">
+          <h2 class="section-title">모니터링 현황</h2>
+          <div class="chart-period-selector">
+            <button class="chart-period-btn active" data-hours="6">6시간</button>
+            <button class="chart-period-btn" data-hours="24">24시간</button>
+            <button class="chart-period-btn" data-hours="72">3일</button>
+            <button class="chart-period-btn" data-hours="168">7일</button>
+          </div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card">
+            <h3 class="chart-title">응답 시간 (ms)</h3>
+            <div class="chart-container">
+              <canvas id="response-time-chart"></canvas>
+            </div>
+            <div class="chart-legend" id="response-time-legend"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">가용성 (%)</h3>
+            <div class="chart-container">
+              <canvas id="availability-chart"></canvas>
+            </div>
+            <div class="chart-stats" id="availability-stats"></div>
+          </div>
         </div>
       </div>
 
@@ -384,8 +415,14 @@
       // 스케줄러 상태 로드
       loadSchedulerStatus();
 
+      // 차트 데이터 로드
+      loadChartData(currentChartPeriod);
+
       // 이벤트 리스너 설정
       setupEventListeners();
+
+      // 차트 기간 선택 이벤트 설정
+      setupChartPeriodSelector();
     });
 
     // 사용자 정보 표시
@@ -1244,6 +1281,253 @@
         stopBtn.disabled = false;
         stopBtn.textContent = '스케줄러 중지';
       }
+    }
+
+    // =====================
+    // 차트 관련 함수들
+    // =====================
+
+    let responseTimeChart = null;
+    let availabilityChart = null;
+    let currentChartPeriod = 24; // 기본 24시간
+
+    // 차트 데이터 로드
+    async function loadChartData(hours = 24) {
+      try {
+        const response = await fetch(`/api/v1/monitoring/charts/dashboard?hours=${hours}`, {
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          updateResponseTimeChart(data.response_time);
+          updateAvailabilityChart(data.availability);
+        }
+      } catch (error) {
+        console.error('차트 데이터 로드 오류:', error);
+      }
+    }
+
+    // 응답 시간 차트 업데이트
+    function updateResponseTimeChart(data) {
+      const ctx = document.getElementById('response-time-chart').getContext('2d');
+
+      // 기존 차트 제거
+      if (responseTimeChart) {
+        responseTimeChart.destroy();
+      }
+
+      // 색상 팔레트
+      const colors = [
+        'rgb(59, 130, 246)',
+        'rgb(16, 185, 129)',
+        'rgb(245, 158, 11)',
+        'rgb(239, 68, 68)',
+        'rgb(139, 92, 246)',
+        'rgb(236, 72, 153)',
+      ];
+
+      const datasets = data.map((project, index) => ({
+        label: project.project_title,
+        data: project.data_points.map(point => ({
+          x: new Date(point.timestamp),
+          y: point.value
+        })),
+        borderColor: colors[index % colors.length],
+        backgroundColor: colors[index % colors.length] + '20',
+        tension: 0.3,
+        fill: false,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+      }));
+
+      responseTimeChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index',
+          },
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = context.parsed.y;
+                  return `${context.dataset.label}: ${value ? Math.round(value) + 'ms' : 'N/A'}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                displayFormats: {
+                  hour: 'HH:mm',
+                  day: 'MM/dd HH:mm'
+                }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'ms'
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+              }
+            }
+          }
+        }
+      });
+
+      // 범례 업데이트
+      updateChartLegend(data);
+    }
+
+    // 차트 범례 업데이트
+    function updateChartLegend(data) {
+      const legendContainer = document.getElementById('response-time-legend');
+      const colors = [
+        'rgb(59, 130, 246)',
+        'rgb(16, 185, 129)',
+        'rgb(245, 158, 11)',
+        'rgb(239, 68, 68)',
+        'rgb(139, 92, 246)',
+        'rgb(236, 72, 153)',
+      ];
+
+      legendContainer.innerHTML = data.map((project, index) => `
+        <div class="chart-legend-item">
+          <span class="chart-legend-color" style="background-color: ${colors[index % colors.length]}"></span>
+          <span class="chart-legend-label">${escapeHtml(project.project_title)}</span>
+          <span class="chart-legend-value">${project.avg_response_time ? Math.round(project.avg_response_time) + 'ms' : '-'}</span>
+        </div>
+      `).join('');
+    }
+
+    // 가용성 차트 업데이트
+    function updateAvailabilityChart(data) {
+      const ctx = document.getElementById('availability-chart').getContext('2d');
+
+      // 기존 차트 제거
+      if (availabilityChart) {
+        availabilityChart.destroy();
+      }
+
+      const labels = data.map(p => p.project_title);
+      const values = data.map(p => p.availability_percentage);
+      const backgroundColors = values.map(v => {
+        if (v >= 99) return 'rgba(16, 185, 129, 0.8)';
+        if (v >= 95) return 'rgba(245, 158, 11, 0.8)';
+        return 'rgba(239, 68, 68, 0.8)';
+      });
+
+      availabilityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '가용성',
+            data: values,
+            backgroundColor: backgroundColors,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `가용성: ${context.parsed.x.toFixed(2)}%`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: '%'
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+              }
+            },
+            y: {
+              grid: {
+                display: false,
+              }
+            }
+          }
+        }
+      });
+
+      // 통계 업데이트
+      updateAvailabilityStats(data);
+    }
+
+    // 가용성 통계 업데이트
+    function updateAvailabilityStats(data) {
+      const statsContainer = document.getElementById('availability-stats');
+
+      if (data.length === 0) {
+        statsContainer.innerHTML = '<p class="no-data">데이터가 없습니다.</p>';
+        return;
+      }
+
+      const totalChecks = data.reduce((sum, p) => sum + p.total_checks, 0);
+      const availableChecks = data.reduce((sum, p) => sum + p.available_checks, 0);
+      const avgAvailability = totalChecks > 0 ? (availableChecks / totalChecks * 100) : 0;
+
+      statsContainer.innerHTML = `
+        <div class="availability-stat">
+          <span class="stat-label">총 체크</span>
+          <span class="stat-value">${totalChecks.toLocaleString()}회</span>
+        </div>
+        <div class="availability-stat">
+          <span class="stat-label">성공</span>
+          <span class="stat-value">${availableChecks.toLocaleString()}회</span>
+        </div>
+        <div class="availability-stat">
+          <span class="stat-label">평균 가용성</span>
+          <span class="stat-value ${avgAvailability >= 99 ? 'good' : avgAvailability >= 95 ? 'warning' : 'bad'}">${avgAvailability.toFixed(2)}%</span>
+        </div>
+      `;
+    }
+
+    // 차트 기간 선택 이벤트 설정
+    function setupChartPeriodSelector() {
+      document.querySelectorAll('.chart-period-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // 활성화 상태 변경
+          document.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          // 차트 데이터 다시 로드
+          const hours = parseInt(btn.dataset.hours);
+          currentChartPeriod = hours;
+          loadChartData(hours);
+        });
+      });
     }
 
     // 유틸리티 함수들
