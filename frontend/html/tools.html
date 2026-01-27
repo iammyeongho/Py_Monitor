@@ -38,6 +38,7 @@
         <button class="tab-btn" data-tab="dns">DNS 조회</button>
         <button class="tab-btn" data-tab="content">콘텐츠 검증</button>
         <button class="tab-btn" data-tab="security">보안 헤더</button>
+        <button class="tab-btn" data-tab="cleanup">로그 정리</button>
       </div>
 
       <!-- TCP 포트 체크 -->
@@ -154,6 +155,55 @@
           <div class="tool-result" id="security-result" style="display: none;"></div>
         </div>
       </div>
+
+      <!-- 로그 정리 -->
+      <div class="tab-content" id="tab-cleanup">
+        <div class="tool-card">
+          <h3 class="tool-title">로그 정리</h3>
+          <p class="tool-description">오래된 모니터링 로그와 알림을 정리하여 데이터베이스 공간을 확보합니다.</p>
+
+          <!-- 통계 영역 -->
+          <div class="cleanup-stats" id="cleanup-stats">
+            <div class="loading">
+              <div class="loading-spinner"></div>
+              <p>통계 로딩 중...</p>
+            </div>
+          </div>
+
+          <!-- 정리 옵션 -->
+          <div class="cleanup-options">
+            <h4 style="margin-bottom: 16px;">정리 옵션</h4>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="log-retention">모니터링 로그 보관 기간 (일)</label>
+                <input type="number" class="form-input" id="log-retention" min="7" max="365" value="30">
+                <span class="form-hint">최소 7일</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="alert-retention">알림 보관 기간 (일)</label>
+                <input type="number" class="form-input" id="alert-retention" min="7" max="365" value="90">
+                <span class="form-hint">최소 7일</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="email-log-retention">이메일 로그 보관 기간 (일)</label>
+              <input type="number" class="form-input" id="email-log-retention" min="7" max="365" value="30" style="max-width: 200px;">
+            </div>
+
+            <div class="cleanup-actions">
+              <button type="button" class="btn btn-secondary" id="refresh-stats-btn">통계 새로고침</button>
+              <button type="button" class="btn btn-danger" id="cleanup-all-btn">
+                <span class="btn-text">전체 정리 실행</span>
+                <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="tool-result" id="cleanup-result" style="display: none;"></div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -206,6 +256,13 @@
 
       // 보안 헤더 체크
       document.getElementById('security-form').addEventListener('submit', handleSecurityCheck);
+
+      // 로그 정리
+      document.getElementById('refresh-stats-btn').addEventListener('click', loadCleanupStats);
+      document.getElementById('cleanup-all-btn').addEventListener('click', handleCleanupAll);
+
+      // 초기 통계 로드
+      loadCleanupStats();
     }
 
     // TCP 포트 체크
@@ -416,6 +473,122 @@
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
       }, 3000);
+    }
+
+    // 로그 정리 통계 로드
+    async function loadCleanupStats() {
+      const statsDiv = document.getElementById('cleanup-stats');
+      statsDiv.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          <p>통계 로딩 중...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch('/api/v1/monitoring/cleanup/statistics', {
+          headers: auth.getAuthHeaders()
+        });
+
+        if (!response.ok) throw new Error('통계 조회 실패');
+
+        const data = await response.json();
+        const stats = data.statistics;
+        const disk = data.disk_usage;
+
+        statsDiv.innerHTML = `
+          <div class="stats-grid" style="margin-bottom: 20px;">
+            <div class="stat-card">
+              <div class="stat-label">모니터링 로그</div>
+              <div class="stat-value">${stats.monitoring_logs.total.toLocaleString()}</div>
+              <div class="stat-detail">30일 이상: ${stats.monitoring_logs.older_than_30_days.toLocaleString()}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">알림</div>
+              <div class="stat-value">${stats.alerts.total.toLocaleString()}</div>
+              <div class="stat-detail">미해결: ${stats.alerts.unresolved}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">이메일 로그</div>
+              <div class="stat-value">${stats.email_logs.total.toLocaleString()}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">예상 용량</div>
+              <div class="stat-value">${disk.total_estimated_size_mb} MB</div>
+            </div>
+          </div>
+        `;
+
+      } catch (error) {
+        statsDiv.innerHTML = `<div class="error-message">통계를 불러오는데 실패했습니다.</div>`;
+        console.error('Stats error:', error);
+      }
+    }
+
+    // 전체 정리 실행
+    async function handleCleanupAll() {
+      if (!confirm('정말 오래된 로그를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+
+      const btn = document.getElementById('cleanup-all-btn');
+      const resultDiv = document.getElementById('cleanup-result');
+
+      btn.querySelector('.btn-text').style.display = 'none';
+      btn.querySelector('.btn-loading').style.display = 'inline-flex';
+      btn.disabled = true;
+
+      try {
+        const logRetention = parseInt(document.getElementById('log-retention').value);
+        const alertRetention = parseInt(document.getElementById('alert-retention').value);
+        const emailLogRetention = parseInt(document.getElementById('email-log-retention').value);
+
+        const response = await fetch(`/api/v1/monitoring/cleanup/all?log_retention_days=${logRetention}&alert_retention_days=${alertRetention}&email_log_retention_days=${emailLogRetention}`, {
+          method: 'POST',
+          headers: auth.getAuthHeaders()
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || '정리 실패');
+        }
+
+        const result = await response.json();
+
+        resultDiv.innerHTML = `
+          <div class="result-header result-success">
+            <span class="result-icon">✓</span>
+            <span class="result-title">정리 완료</span>
+          </div>
+          <div class="result-details">
+            <div class="result-row"><span>삭제된 모니터링 로그</span><span>${result.monitoring_logs_deleted}개</span></div>
+            <div class="result-row"><span>삭제된 알림</span><span>${result.alerts_deleted}개</span></div>
+            <div class="result-row"><span>삭제된 이메일 로그</span><span>${result.email_logs_deleted}개</span></div>
+            <div class="result-row"><span>정리 시간</span><span>${formatDateTime(result.cleanup_time)}</span></div>
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+        showToast('로그 정리가 완료되었습니다.', 'success');
+
+        // 통계 새로고침
+        loadCleanupStats();
+
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="result-header result-error">
+            <span class="result-icon">✗</span>
+            <span class="result-title">정리 실패</span>
+          </div>
+          <div class="result-details">
+            <div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(error.message)}</span></div>
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+        showToast(error.message, 'error');
+      } finally {
+        btn.querySelector('.btn-text').style.display = 'inline';
+        btn.querySelector('.btn-loading').style.display = 'none';
+        btn.disabled = false;
+      }
     }
   </script>
 </body>

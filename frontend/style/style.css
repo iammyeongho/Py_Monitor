@@ -2281,3 +2281,55 @@ input, textarea, select {
         justify-content: center;
     }
 }
+
+/* ========================================
+   Cleanup Page Styles
+   ======================================== */
+
+.cleanup-stats {
+    margin-bottom: var(--spacing-xl);
+}
+
+.cleanup-stats .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.cleanup-stats .stat-card {
+    text-align: center;
+}
+
+.cleanup-stats .stat-detail {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    margin-top: var(--spacing-xs);
+}
+
+.cleanup-options {
+    background-color: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.cleanup-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--gray-200);
+}
+
+@media (max-width: 768px) {
+    .cleanup-stats .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .cleanup-actions {
+        flex-direction: column;
+    }
+
+    .cleanup-actions .btn {
+        width: 100%;
+    }
+}
