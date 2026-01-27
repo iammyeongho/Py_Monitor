@@ -1,0 +1,119 @@
+/* ========================================
+   Auth Pages (Login, Register)
+   ======================================== */
+
+.auth-body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--gray-50);
+    padding: var(--spacing-lg);
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--gray-50);
+    padding: var(--spacing-lg);
+}
+
+.auth-card {
+    background-color: var(--white);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-2xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-logo {
+    display: inline-block;
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.auth-logo h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.auth-logo h1 span {
+    color: var(--success);
+}
+
+.auth-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+}
+
+.auth-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--gray-900);
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+}
+
+.auth-form {
+    margin-bottom: var(--spacing-lg);
+}
+
+.auth-error {
+    padding: var(--spacing-md);
+    background-color: var(--error-bg);
+    color: var(--error);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.auth-success {
+    padding: var(--spacing-md);
+    background-color: var(--success-bg);
+    color: var(--success);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.auth-links {
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+}
+
+.auth-links a {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+.auth-copyright {
+    text-align: center;
+    font-size: var(--font-size-xs);
+    color: var(--gray-400);
+    margin-top: var(--spacing-xl);
+}
+
+@media (max-width: 768px) {
+    .auth-card {
+        padding: var(--spacing-lg);
+    }
+}

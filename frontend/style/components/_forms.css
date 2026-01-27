@@ -1,0 +1,139 @@
+/* ========================================
+   Forms
+   ======================================== */
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.form-label {
+    display: block;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-sm);
+}
+
+.form-input {
+    width: 100%;
+    height: 48px;
+    padding: 0 var(--spacing-md);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-md);
+    color: var(--gray-900);
+    background-color: var(--white);
+    transition: all var(--transition-fast);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(34, 34, 34, 0.1);
+}
+
+.form-input::placeholder {
+    color: var(--gray-400);
+}
+
+.form-input:disabled {
+    background-color: var(--gray-100);
+    cursor: not-allowed;
+}
+
+.form-hint {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+    margin-top: var(--spacing-xs);
+}
+
+.form-error {
+    font-size: var(--font-size-xs);
+    color: var(--error);
+    margin-top: var(--spacing-xs);
+}
+
+/* Form Checkbox */
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-weight: 400;
+}
+
+.form-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+/* Form Section Divider */
+.form-section-divider {
+    height: 1px;
+    background-color: var(--gray-200);
+    margin: var(--spacing-lg) 0;
+}
+
+/* Form Subsection Title */
+.form-subsection-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Form Card */
+.form-card {
+    background-color: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    padding: var(--spacing-xl);
+}
+
+/* Form Section */
+.form-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.form-section-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Form Textarea */
+.form-textarea {
+    height: auto;
+    padding: var(--spacing-md);
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Required Indicator */
+.required {
+    color: var(--error);
+}
+
+@media (max-width: 768px) {
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+    }
+}

@@ -1,0 +1,148 @@
+/* ========================================
+   Badges & Status Indicators
+   ======================================== */
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.status-badge.online {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.status-badge.offline {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+.status-badge.warning {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+/* Project Status */
+.project-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.project-status.status-online {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.project-status.status-offline {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+.project-status.status-pending {
+    background-color: var(--gray-100);
+    color: var(--gray-500);
+}
+
+/* Generic Badge */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.badge-error {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+.badge-warning {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+}
+
+.badge-info {
+    background-color: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.badge-pending {
+    background-color: var(--gray-100);
+    color: var(--gray-500);
+}
+
+/* SSL Badge */
+.ssl-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.ssl-badge.ssl-valid {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.ssl-badge.ssl-warning {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+}
+
+.ssl-badge.ssl-invalid {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+/* Health Badge */
+.health-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+}
+
+.health-badge.healthy {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.health-badge.unhealthy {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+.health-badge.unknown {
+    background-color: var(--gray-100);
+    color: var(--gray-500);
+}

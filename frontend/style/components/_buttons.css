@@ -1,0 +1,112 @@
+/* ========================================
+   Buttons
+   ======================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    padding: 0 var(--spacing-lg);
+    height: 42px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.btn-lg {
+    height: 52px;
+    padding: 0 var(--spacing-xl);
+    font-size: var(--font-size-lg);
+}
+
+.btn-sm {
+    height: 32px;
+    padding: 0 var(--spacing-md);
+    font-size: var(--font-size-sm);
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-light);
+}
+
+.btn-secondary {
+    background-color: var(--white);
+    color: var(--gray-900);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background-color: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-ghost {
+    background-color: transparent;
+    color: var(--gray-600);
+    border: none;
+}
+
+.btn-ghost:hover {
+    background-color: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.btn-danger {
+    background-color: var(--error);
+    color: var(--white);
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: #d9534f;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: var(--radius-md);
+}
+
+.btn-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Button Block */
+.btn-block {
+    width: 100%;
+}
+
+/* Button Loading State */
+.btn-loading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Loading Spinner Small */
+.loading-spinner-sm {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
