@@ -13,7 +13,8 @@ Laravel의 routes/api.php와 유사한 역할을 합니다.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import monitoring, notifications, projects, users
+from app.api.v1.endpoints import notifications, projects, users
+from app.api.v1.endpoints.monitoring import router as monitoring_router
 
 # API v1 라우터 생성
 # 이 라우터는 main.py에서 /api/v1 prefix로 등록됩니다
@@ -29,7 +30,7 @@ api_router.include_router(projects.router, prefix="/projects", tags=["projects"]
 
 # 모니터링 라우터 등록
 # 프로젝트 상태 조회, 로그 조회 등의 엔드포인트 포함
-api_router.include_router(monitoring.router, prefix="/monitoring", tags=["monitoring"])
+api_router.include_router(monitoring_router, prefix="/monitoring", tags=["monitoring"])
 
 # 알림 라우터 등록
 # 알림 조회, 읽음 처리 등의 엔드포인트 포함
