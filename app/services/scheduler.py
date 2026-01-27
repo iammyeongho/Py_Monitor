@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSetting
 from app.models.project import Project
 from app.services.monitoring import MonitoringService
+from app.services.notification_service import NotificationService
 from app.services.playwright_monitor import PlaywrightMonitorService
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class MonitoringScheduler:
         self.db = db
         self.tasks: Dict[int, asyncio.Task] = {}
         self.monitoring_service = MonitoringService(db)
+        self.notification_service = NotificationService(db)
         self.playwright_service: Optional[PlaywrightMonitorService] = None
         self.consecutive_failures: Dict[int, int] = {}  # 프로젝트별 연속 실패 횟수
         self.is_running = False
@@ -257,24 +259,56 @@ class MonitoringScheduler:
                 if playwright_result and playwright_result.error_message:
                     error_details.append(f"Playwright: {playwright_result.error_message}")
 
+                alert_message = f"서비스 연속 {failures}회 실패. " + "; ".join(error_details) if error_details else f"서비스 연속 {failures}회 실패"
+
                 alert = MonitoringAlert(
                     project_id=project_id,
                     alert_type="availability",
-                    message=f"서비스 연속 {failures}회 실패. " + "; ".join(error_details) if error_details else f"서비스 연속 {failures}회 실패",
+                    message=alert_message,
                 )
                 self.db.add(alert)
                 logger.error(f"Alert created for project {project_id}: {failures} consecutive failures")
 
+                # 이메일/웹훅 알림 발송
+                try:
+                    await self.notification_service.send_alert_notification(
+                        project_id=project_id,
+                        alert_type="availability",
+                        message=alert_message,
+                        details={
+                            "연속 실패 횟수": failures,
+                            "HTTP 상태 코드": http_status.status_code,
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send notification: {e}")
+
         else:
             # 복구 시 알림 생성 (이전에 실패한 경우에만)
             if self.consecutive_failures.get(project_id, 0) >= alert_threshold:
+                recovery_message = f"서비스가 복구되었습니다. (응답 시간: {http_status.response_time:.2f}s)"
+
                 alert = MonitoringAlert(
                     project_id=project_id,
                     alert_type="recovery",
-                    message=f"서비스가 복구되었습니다. (응답 시간: {http_status.response_time:.2f}s)",
+                    message=recovery_message,
                 )
                 self.db.add(alert)
                 logger.info(f"Recovery alert created for project {project_id}")
+
+                # 복구 알림 발송
+                try:
+                    await self.notification_service.send_alert_notification(
+                        project_id=project_id,
+                        alert_type="recovery",
+                        message=recovery_message,
+                        details={
+                            "응답 시간": f"{http_status.response_time:.2f}s",
+                            "HTTP 상태 코드": http_status.status_code,
+                        }
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to send recovery notification: {e}")
 
             self.consecutive_failures[project_id] = 0
 
