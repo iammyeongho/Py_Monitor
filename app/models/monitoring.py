@@ -94,6 +94,50 @@ class MonitoringLog(Base):
     # 관계 설정
     project = relationship("Project", back_populates="monitoring_logs")
 
+    # ==================== 비즈니스 메서드 ====================
+
+    @property
+    def is_success(self) -> bool:
+        """성공 여부 (가용성 O + 상태코드 2xx)"""
+        return self.is_available and self.status_code and 200 <= self.status_code < 300
+
+    @property
+    def is_slow(self) -> bool:
+        """느린 응답 여부 (3초 초과)"""
+        return self.response_time and self.response_time > 3.0
+
+    @property
+    def response_time_ms(self) -> float:
+        """응답 시간 (밀리초)"""
+        return (self.response_time or 0) * 1000
+
+    @property
+    def status_text(self) -> str:
+        """상태 텍스트"""
+        if not self.is_available:
+            return "장애"
+        if self.is_slow:
+            return "느림"
+        return "정상"
+
+    def get_performance_grade(self) -> str:
+        """성능 등급 (A~F)"""
+        if not self.response_time:
+            return "N/A"
+        if self.response_time < 0.5:
+            return "A"
+        if self.response_time < 1.0:
+            return "B"
+        if self.response_time < 2.0:
+            return "C"
+        if self.response_time < 3.0:
+            return "D"
+        return "F"
+
+    def has_js_errors(self) -> bool:
+        """JavaScript 에러 존재 여부"""
+        return self.console_errors and self.console_errors > 0
+
 
 class MonitoringAlert(Base):
     """
@@ -127,6 +171,26 @@ class MonitoringAlert(Base):
 
     # 관계 설정
     project = relationship("Project", back_populates="monitoring_alerts")
+
+    # ==================== 비즈니스 메서드 ====================
+
+    @property
+    def is_critical(self) -> bool:
+        """심각한 알림 여부"""
+        return self.alert_type in ("error", "critical", "availability")
+
+    @property
+    def duration_hours(self) -> float:
+        """알림 지속 시간 (시간)"""
+        if self.is_resolved and self.resolved_at:
+            delta = self.resolved_at - self.created_at
+        else:
+            delta = datetime.utcnow() - self.created_at
+        return delta.total_seconds() / 3600
+
+    def can_resolve(self) -> bool:
+        """해결 가능 여부"""
+        return not self.is_resolved
 
 
 class MonitoringSetting(Base):

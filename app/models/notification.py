@@ -12,6 +12,8 @@ Laravel의 Notification 모델과 유사한 역할을 합니다.
 - is_read: 읽음 여부
 """
 
+from datetime import datetime
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -47,3 +49,45 @@ class Notification(Base):
 
     # 관계 설정
     project = relationship("Project", back_populates="notifications")
+
+    # ==================== 비즈니스 메서드 ====================
+
+    @property
+    def is_critical(self) -> bool:
+        """심각한 알림 여부"""
+        return self.severity in ("error", "critical")
+
+    @property
+    def is_pending(self) -> bool:
+        """발송 대기 중 여부"""
+        return not self.is_sent
+
+    @property
+    def age_hours(self) -> float:
+        """알림 생성 후 경과 시간 (시간)"""
+        if not self.created_at:
+            return 0
+        delta = datetime.utcnow() - self.created_at.replace(tzinfo=None)
+        return delta.total_seconds() / 3600
+
+    @property
+    def is_email_type(self) -> bool:
+        """이메일 알림 여부"""
+        return self.type == "email"
+
+    @property
+    def is_webhook_type(self) -> bool:
+        """웹훅 알림 여부"""
+        return self.type == "webhook"
+
+    def can_resend(self, hours: int = 1) -> bool:
+        """재발송 가능 여부 (발송 후 일정 시간 경과)"""
+        if not self.is_sent or not self.sent_at:
+            return True
+        delta = datetime.utcnow() - self.sent_at.replace(tzinfo=None)
+        return delta.total_seconds() > (hours * 3600)
+
+    def get_severity_level(self) -> int:
+        """심각도 레벨 (정렬용)"""
+        levels = {"info": 0, "warning": 1, "error": 2, "critical": 3}
+        return levels.get(self.severity, 0)

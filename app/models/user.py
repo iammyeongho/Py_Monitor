@@ -44,3 +44,28 @@ class User(Base):
     email_logs = relationship(
         "EmailLog", back_populates="user", cascade="all, delete-orphan"
     )
+
+    # ==================== 비즈니스 메서드 ====================
+
+    @property
+    def is_deleted(self) -> bool:
+        """소프트 삭제 여부"""
+        return self.deleted_at is not None
+
+    @property
+    def display_name(self) -> str:
+        """표시용 이름 (full_name이 없으면 이메일)"""
+        return self.full_name or self.email.split("@")[0]
+
+    @property
+    def project_count(self) -> int:
+        """사용자의 프로젝트 개수"""
+        return len([p for p in self.projects if p.deleted_at is None])
+
+    def can_receive_email(self) -> bool:
+        """이메일 수신 가능 여부"""
+        return self.is_active and self.email_notifications and not self.is_deleted
+
+    def has_permission(self, resource_user_id: int) -> bool:
+        """리소스 접근 권한 확인 (본인 또는 관리자)"""
+        return self.id == resource_user_id or self.is_superuser

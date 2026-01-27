@@ -9,6 +9,9 @@
 # 3. ondelete="CASCADE" = Laravel의 onDelete('cascade')와 유사
 """
 
+from datetime import datetime
+from urllib.parse import urlparse
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -98,3 +101,63 @@ class Project(Base):
     ssl_domain_status = relationship(
         "SSLDomainStatus", back_populates="project", cascade="all, delete-orphan"
     )
+
+    # ==================== 비즈니스 메서드 ====================
+
+    @property
+    def is_deleted(self) -> bool:
+        """소프트 삭제 여부"""
+        return self.deleted_at is not None
+
+    @property
+    def is_monitoring_enabled(self) -> bool:
+        """모니터링 활성화 여부 (활성 + 상태 정상 + 미삭제)"""
+        return self.is_active and self.status and not self.is_deleted
+
+    @property
+    def domain(self) -> str:
+        """URL에서 도메인 추출"""
+        if not self.url:
+            return ""
+        parsed = urlparse(self.url)
+        return parsed.netloc or parsed.path.split("/")[0]
+
+    @property
+    def protocol(self) -> str:
+        """URL 프로토콜 (http/https)"""
+        if not self.url:
+            return ""
+        parsed = urlparse(self.url)
+        return parsed.scheme or "https"
+
+    @property
+    def is_https(self) -> bool:
+        """HTTPS 사용 여부"""
+        return self.protocol.lower() == "https"
+
+    @property
+    def latest_log(self):
+        """최신 모니터링 로그"""
+        if not self.monitoring_logs:
+            return None
+        return max(self.monitoring_logs, key=lambda x: x.created_at)
+
+    @property
+    def unresolved_alert_count(self) -> int:
+        """미해결 알림 개수"""
+        return len([a for a in self.monitoring_alerts if not a.is_resolved])
+
+    def get_check_interval_minutes(self) -> int:
+        """체크 주기 (분 단위)"""
+        return self.status_interval // 60 if self.status_interval else 5
+
+    def needs_snapshot_update(self, hours: int = 24) -> bool:
+        """스냅샷 업데이트 필요 여부"""
+        if not self.last_snapshot_at:
+            return True
+        delta = datetime.utcnow() - self.last_snapshot_at
+        return delta.total_seconds() > (hours * 3600)
+
+    def is_response_time_exceeded(self, response_time: float) -> bool:
+        """응답 시간 제한 초과 여부"""
+        return response_time > self.time_limit if self.time_limit else False
