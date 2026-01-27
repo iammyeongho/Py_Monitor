@@ -16,7 +16,9 @@ from app.core.exceptions.base import (
     AppException,
     AuthenticationError,
     AuthorizationError,
+    BusinessRuleError,
     ConflictError,
+    ExternalServiceError,
     NotFoundError,
     ValidationError,
 )
@@ -28,4 +30,6 @@ __all__ = [
     "AuthenticationError",
     "AuthorizationError",
     "ConflictError",
+    "BusinessRuleError",
+    "ExternalServiceError",
 ]
