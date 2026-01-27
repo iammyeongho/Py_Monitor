@@ -2196,3 +2196,88 @@ input, textarea, select {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* ========================================
+   Scheduler Control
+   ======================================== */
+
+.scheduler-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    margin-bottom: var(--spacing-xl);
+}
+
+.scheduler-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.scheduler-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.scheduler-indicator.running {
+    background-color: var(--success);
+    box-shadow: 0 0 0 0 rgba(49, 180, 110, 0.4);
+    animation: pulse-green 2s infinite;
+}
+
+.scheduler-indicator.stopped {
+    background-color: var(--gray-400);
+    animation: none;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(49, 180, 110, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(49, 180, 110, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(49, 180, 110, 0);
+    }
+}
+
+.scheduler-label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.scheduler-count {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-left: var(--spacing-xs);
+}
+
+.scheduler-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+@media (max-width: 768px) {
+    .scheduler-control {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: stretch;
+    }
+
+    .scheduler-status {
+        justify-content: center;
+    }
+
+    .scheduler-actions {
+        justify-content: center;
+    }
+}

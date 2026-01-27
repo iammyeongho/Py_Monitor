@@ -379,3 +379,19 @@ class PlaywrightCheckResponse(BaseModel):
     network: PlaywrightNetwork = Field(default_factory=PlaywrightNetwork)
     memory: PlaywrightMemory = Field(default_factory=PlaywrightMemory)
     checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# 스케줄러 상태 스키마
+class SchedulerStatus(BaseModel):
+    """스케줄러 상태 스키마"""
+    is_running: bool
+    active_projects: list[int] = Field(default_factory=list)
+    project_count: int = 0
+    consecutive_failures: dict[int, int] = Field(default_factory=dict)
+
+
+class ProjectMonitoringStatus(BaseModel):
+    """프로젝트 모니터링 상태 스키마"""
+    project_id: int
+    is_monitoring: bool
+    consecutive_failures: int = 0

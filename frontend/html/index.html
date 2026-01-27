@@ -55,6 +55,20 @@
         </div>
       </div>
 
+      <!-- 스케줄러 컨트롤 -->
+      <div class="scheduler-control" id="scheduler-control">
+        <div class="scheduler-status">
+          <div class="scheduler-indicator" id="scheduler-indicator"></div>
+          <span class="scheduler-label" id="scheduler-label">스케줄러 상태 확인 중...</span>
+          <span class="scheduler-count" id="scheduler-count"></span>
+        </div>
+        <div class="scheduler-actions">
+          <button class="btn btn-sm btn-primary" id="scheduler-start-btn" style="display: none;">스케줄러 시작</button>
+          <button class="btn btn-sm btn-secondary" id="scheduler-stop-btn" style="display: none;">스케줄러 중지</button>
+          <button class="btn btn-sm btn-secondary" id="scheduler-refresh-btn">새로고침</button>
+        </div>
+      </div>
+
       <!-- 프로젝트 그리드 -->
       <div class="section-header">
         <h2 class="section-title">내 프로젝트</h2>
@@ -367,6 +381,9 @@
       // 프로젝트 목록 로드
       loadProjects();
 
+      // 스케줄러 상태 로드
+      loadSchedulerStatus();
+
       // 이벤트 리스너 설정
       setupEventListeners();
     });
@@ -385,6 +402,11 @@
       document.getElementById('logout-btn').addEventListener('click', () => {
         auth.logout();
       });
+
+      // 스케줄러 컨트롤
+      document.getElementById('scheduler-start-btn').addEventListener('click', startScheduler);
+      document.getElementById('scheduler-stop-btn').addEventListener('click', stopScheduler);
+      document.getElementById('scheduler-refresh-btn').addEventListener('click', loadSchedulerStatus);
 
       // 설정 모달 닫기
       document.getElementById('close-setting-modal').addEventListener('click', closeSettingModal);
@@ -1106,6 +1128,121 @@
       } finally {
         btn.disabled = false;
         btn.textContent = '심층 체크 실행';
+      }
+    }
+
+    // =====================
+    // 스케줄러 관련 함수들
+    // =====================
+
+    // 스케줄러 상태 로드
+    async function loadSchedulerStatus() {
+      try {
+        const response = await fetch('/api/v1/monitoring/scheduler/status', {
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const status = await response.json();
+          updateSchedulerUI(status);
+        } else {
+          updateSchedulerUI({ is_running: false, project_count: 0 });
+        }
+      } catch (error) {
+        console.error('스케줄러 상태 로드 오류:', error);
+        updateSchedulerUI({ is_running: false, project_count: 0, error: true });
+      }
+    }
+
+    // 스케줄러 UI 업데이트
+    function updateSchedulerUI(status) {
+      const indicator = document.getElementById('scheduler-indicator');
+      const label = document.getElementById('scheduler-label');
+      const count = document.getElementById('scheduler-count');
+      const startBtn = document.getElementById('scheduler-start-btn');
+      const stopBtn = document.getElementById('scheduler-stop-btn');
+
+      if (status.error) {
+        indicator.className = 'scheduler-indicator stopped';
+        label.textContent = '상태 확인 실패';
+        count.textContent = '';
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+        return;
+      }
+
+      if (status.is_running) {
+        indicator.className = 'scheduler-indicator running';
+        label.textContent = '자동 모니터링 실행 중';
+        count.textContent = `(${status.project_count}개 프로젝트)`;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+      } else {
+        indicator.className = 'scheduler-indicator stopped';
+        label.textContent = '자동 모니터링 중지됨';
+        count.textContent = '';
+        startBtn.style.display = 'inline-block';
+        stopBtn.style.display = 'none';
+      }
+    }
+
+    // 스케줄러 시작
+    async function startScheduler() {
+      const startBtn = document.getElementById('scheduler-start-btn');
+      startBtn.disabled = true;
+      startBtn.textContent = '시작 중...';
+
+      try {
+        const response = await fetch('/api/v1/monitoring/scheduler/start', {
+          method: 'POST',
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          updateSchedulerUI(result.status);
+          showToast('스케줄러가 시작되었습니다.', 'success');
+        } else {
+          const error = await response.json();
+          showToast(error.detail || '스케줄러 시작에 실패했습니다.', 'error');
+        }
+      } catch (error) {
+        console.error('스케줄러 시작 오류:', error);
+        showToast('스케줄러 시작 중 오류가 발생했습니다.', 'error');
+      } finally {
+        startBtn.disabled = false;
+        startBtn.textContent = '스케줄러 시작';
+      }
+    }
+
+    // 스케줄러 중지
+    async function stopScheduler() {
+      if (!confirm('스케줄러를 중지하시겠습니까? 자동 모니터링이 중단됩니다.')) return;
+
+      const stopBtn = document.getElementById('scheduler-stop-btn');
+      stopBtn.disabled = true;
+      stopBtn.textContent = '중지 중...';
+
+      try {
+        const response = await fetch('/api/v1/monitoring/scheduler/stop', {
+          method: 'POST',
+          headers: auth.getAuthHeaders()
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          updateSchedulerUI(result.status);
+          showToast('스케줄러가 중지되었습니다.', 'success');
+        } else {
+          const error = await response.json();
+          showToast(error.detail || '스케줄러 중지에 실패했습니다.', 'error');
+        }
+      } catch (error) {
+        console.error('스케줄러 중지 오류:', error);
+        showToast('스케줄러 중지 중 오류가 발생했습니다.', 'error');
+      } finally {
+        stopBtn.disabled = false;
+        stopBtn.textContent = '스케줄러 중지';
       }
     }
 
