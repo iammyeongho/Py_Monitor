@@ -45,8 +45,8 @@
 }
 
 .toast-info {
-    background-color: var(--gray-800);
-    color: var(--white);
+    background-color: var(--primary);
+    color: var(--bg-primary);
 }
 
 @media (max-width: 480px) {

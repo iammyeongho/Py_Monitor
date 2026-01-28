@@ -34,14 +34,15 @@
 }
 
 .modal-content {
-    background-color: var(--white);
+    background-color: var(--modal-bg);
     border-radius: var(--radius-xl);
     width: 100%;
     max-width: 480px;
     max-height: 90vh;
     overflow: hidden;
     transform: translateY(0);
-    transition: transform var(--transition-normal);
+    transition: transform var(--transition-normal), background-color var(--transition-normal);
+    border: 1px solid var(--border-color);
 }
 
 .modal-lg {
@@ -50,7 +51,7 @@
 
 .modal-header {
     padding: var(--spacing-lg) var(--spacing-xl);
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -59,7 +60,7 @@
 .modal-title {
     font-size: var(--font-size-lg);
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .modal-close {
@@ -69,7 +70,7 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-sm);
-    color: var(--gray-500);
+    color: var(--text-tertiary);
     transition: all var(--transition-fast);
     cursor: pointer;
     background: none;
@@ -78,8 +79,8 @@
 }
 
 .modal-close:hover {
-    background-color: var(--gray-100);
-    color: var(--gray-900);
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .modal-body {
@@ -90,7 +91,7 @@
 
 .modal-footer {
     padding: var(--spacing-lg) var(--spacing-xl);
-    border-top: 1px solid var(--gray-200);
+    border-top: 1px solid var(--border-color);
     display: flex;
     gap: var(--spacing-sm);
     justify-content: flex-end;
@@ -100,7 +101,7 @@
 .modal-tabs {
     display: flex;
     padding: 0 var(--spacing-xl);
-    border-bottom: 1px solid var(--gray-200);
+    border-bottom: 1px solid var(--border-color);
     gap: var(--spacing-xs);
 }
 
@@ -108,7 +109,7 @@
     padding: var(--spacing-md) var(--spacing-lg);
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--gray-500);
+    color: var(--text-tertiary);
     background: none;
     border: none;
     border-bottom: 2px solid transparent;
@@ -118,7 +119,7 @@
 }
 
 .modal-tab:hover {
-    color: var(--gray-700);
+    color: var(--text-secondary);
 }
 
 .modal-tab.active {

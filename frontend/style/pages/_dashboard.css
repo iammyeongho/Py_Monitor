@@ -16,24 +16,24 @@
 .chart-period-btn {
     padding: var(--spacing-xs) var(--spacing-sm);
     background: none;
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     font-size: var(--font-size-xs);
     font-weight: 500;
-    color: var(--gray-600);
+    color: var(--text-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
 
 .chart-period-btn:hover {
-    border-color: var(--gray-400);
-    color: var(--gray-800);
+    border-color: var(--text-tertiary);
+    color: var(--text-primary);
 }
 
 .chart-period-btn.active {
     background-color: var(--primary);
     border-color: var(--primary);
-    color: var(--white);
+    color: var(--bg-primary);
 }
 
 /* Chart Legend */
@@ -43,7 +43,7 @@
     gap: var(--spacing-md);
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);
-    border-top: 1px solid var(--gray-100);
+    border-top: 1px solid var(--border-color);
 }
 
 .chart-legend-item {
@@ -60,13 +60,13 @@
 
 .chart-legend-label {
     font-size: var(--font-size-xs);
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 .chart-legend-value {
     font-size: var(--font-size-xs);
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
     margin-left: var(--spacing-xs);
 }
 
@@ -76,7 +76,7 @@
     justify-content: space-around;
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);
-    border-top: 1px solid var(--gray-100);
+    border-top: 1px solid var(--border-color);
 }
 
 .availability-stat {
@@ -85,7 +85,7 @@
 
 .availability-stat .stat-label {
     font-size: var(--font-size-xs);
-    color: var(--gray-500);
+    color: var(--text-tertiary);
     display: block;
     margin-bottom: 2px;
 }
@@ -93,7 +93,7 @@
 .availability-stat .stat-value {
     font-size: var(--font-size-md);
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .availability-stat .stat-value.good {
@@ -114,10 +114,11 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--spacing-md) var(--spacing-lg);
-    background-color: var(--white);
+    background-color: var(--card-bg);
     border-radius: var(--radius-lg);
-    border: 1px solid var(--gray-200);
+    border: 1px solid var(--border-color);
     margin-bottom: var(--spacing-xl);
+    transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 .scheduler-status {
@@ -140,7 +141,7 @@
 }
 
 .scheduler-indicator.stopped {
-    background-color: var(--gray-400);
+    background-color: var(--text-tertiary);
     animation: none;
 }
 
@@ -159,12 +160,12 @@
 .scheduler-label {
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--gray-700);
+    color: var(--text-secondary);
 }
 
 .scheduler-count {
     font-size: var(--font-size-sm);
-    color: var(--gray-500);
+    color: var(--text-tertiary);
     margin-left: var(--spacing-xs);
 }
 
@@ -178,14 +179,15 @@
 .detail-section {
     margin-bottom: var(--spacing-lg);
     padding: var(--spacing-md);
-    background-color: var(--gray-50);
+    background-color: var(--bg-secondary);
     border-radius: var(--radius-md);
+    transition: background-color var(--transition-normal);
 }
 
 .detail-section-title {
     font-size: var(--font-size-md);
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
     margin-bottom: var(--spacing-md);
 }
 
@@ -194,7 +196,7 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--spacing-sm) 0;
-    border-bottom: 1px solid var(--gray-100);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .detail-row:last-child {
@@ -204,18 +206,18 @@
 .detail-label {
     font-size: var(--font-size-sm);
     font-weight: 500;
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 .detail-value {
     font-size: var(--font-size-md);
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .detail-subsection {
     margin-top: var(--spacing-md);
     padding-top: var(--spacing-md);
-    border-top: 1px solid var(--gray-200);
+    border-top: 1px solid var(--border-color);
 }
 
 .detail-subsection:first-child {
@@ -227,7 +229,7 @@
 .detail-subsection-title {
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--gray-700);
+    color: var(--text-secondary);
     margin-bottom: var(--spacing-sm);
 }
 
@@ -302,7 +304,7 @@
 
 .history-time {
     font-size: var(--font-size-sm);
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 .history-details {
@@ -314,13 +316,14 @@
 
 .history-code {
     padding: 2px 8px;
-    background-color: var(--white);
+    background-color: var(--bg-primary);
     border-radius: var(--radius-sm);
     font-weight: 500;
+    color: var(--text-primary);
 }
 
 .history-response {
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 .history-error-msg {

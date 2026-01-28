@@ -6,8 +6,9 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background-color: var(--white);
-    border-bottom: 1px solid var(--gray-200);
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 .header-inner {
@@ -46,14 +47,14 @@
 
 .nav-link {
     font-size: var(--font-size-md);
-    color: var(--gray-600);
+    color: var(--text-secondary);
     transition: color var(--transition-fast);
     padding: var(--spacing-sm) 0;
 }
 
 .nav-link:hover,
 .nav-link.active {
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .nav-link.active {
@@ -72,20 +73,20 @@
 }
 
 .user-menu:hover {
-    background-color: var(--gray-100);
+    background-color: var(--bg-tertiary);
 }
 
 .user-avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: var(--gray-300);
+    background-color: var(--bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: var(--font-size-sm);
     font-weight: 600;
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 /* User Actions */
@@ -97,7 +98,7 @@
 
 .user-name {
     font-size: var(--font-size-sm);
-    color: var(--gray-600);
+    color: var(--text-secondary);
 }
 
 @media (max-width: 768px) {

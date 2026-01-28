@@ -24,7 +24,7 @@
 .page-title {
     font-size: var(--font-size-2xl);
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 /* Section Header */
@@ -38,7 +38,7 @@
 .section-title {
     font-size: var(--font-size-lg);
     font-weight: 600;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 /* Dashboard Layout */
@@ -58,12 +58,12 @@
 .dashboard-title {
     font-size: var(--font-size-2xl);
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--text-primary);
 }
 
 .dashboard-subtitle {
     font-size: var(--font-size-md);
-    color: var(--gray-500);
+    color: var(--text-tertiary);
     margin-top: var(--spacing-xs);
 }
 

@@ -7,8 +7,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--gray-50);
+    background-color: var(--bg-secondary);
     padding: var(--spacing-lg);
+    transition: background-color var(--transition-normal);
 }
 
 .auth-container {
@@ -21,15 +22,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--gray-50);
+    background-color: var(--bg-secondary);
     padding: var(--spacing-lg);
+    transition: background-color var(--transition-normal);
 }
 
 .auth-card {
-    background-color: var(--white);
+    background-color: var(--card-bg);
     border-radius: var(--radius-xl);
     padding: var(--spacing-2xl);
     box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    transition: background-color var(--transition-normal), border-color var(--transition-normal);
 }
 
 .auth-header {
@@ -57,13 +61,13 @@
 
 .auth-subtitle {
     font-size: var(--font-size-sm);
-    color: var(--gray-500);
+    color: var(--text-secondary);
 }
 
 .auth-title {
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--gray-900);
+    color: var(--text-primary);
     text-align: center;
     margin-bottom: var(--spacing-lg);
 }
@@ -93,7 +97,7 @@
 .auth-links {
     text-align: center;
     font-size: var(--font-size-sm);
-    color: var(--gray-500);
+    color: var(--text-secondary);
 }
 
 .auth-links a {
@@ -108,8 +112,40 @@
 .auth-copyright {
     text-align: center;
     font-size: var(--font-size-xs);
-    color: var(--gray-400);
+    color: var(--text-tertiary);
     margin-top: var(--spacing-xl);
+}
+
+/* Auth Divider */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: var(--spacing-lg) 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.auth-divider span {
+    padding: 0 var(--spacing-md);
+    color: var(--text-tertiary);
+    font-size: var(--font-size-sm);
+}
+
+/* Auth Footer */
+.auth-footer {
+    text-align: center;
+}
+
+.auth-footer p {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 @media (max-width: 768px) {
