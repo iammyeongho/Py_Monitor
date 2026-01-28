@@ -23,6 +23,26 @@ from app.services.monitoring import MonitoringService
 from app.services.notification_service import NotificationService
 from app.services.playwright_monitor import PlaywrightMonitorService
 
+# WebSocket 알림 함수 (지연 임포트로 순환 참조 방지)
+_ws_notify_update = None
+_ws_notify_alert = None
+
+
+def _get_ws_functions():
+    """WebSocket 함수 지연 로드"""
+    global _ws_notify_update, _ws_notify_alert
+    if _ws_notify_update is None:
+        try:
+            from app.api.v1.endpoints.websocket import (
+                notify_monitoring_update,
+                notify_alert
+            )
+            _ws_notify_update = notify_monitoring_update
+            _ws_notify_alert = notify_alert
+        except ImportError:
+            pass
+    return _ws_notify_update, _ws_notify_alert
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,6 +56,9 @@ class MonitoringScheduler:
         self.notification_service = NotificationService(db)
         self.playwright_service: Optional[PlaywrightMonitorService] = None
         self.consecutive_failures: Dict[int, int] = {}  # 프로젝트별 연속 실패 횟수
+        self.last_slow_alert: Dict[int, datetime] = {}  # 프로젝트별 마지막 느린 응답 알림 시간
+        self.last_ssl_check: Dict[int, datetime] = {}  # 프로젝트별 마지막 SSL 체크 시간
+        self.ssl_check_task: Optional[asyncio.Task] = None  # SSL/도메인 만료 체크 태스크
         self.is_running = False
         self._lock = asyncio.Lock()
 
@@ -60,6 +83,9 @@ class MonitoringScheduler:
             for project in projects:
                 await self.start_monitoring(project.id)
 
+            # SSL/도메인 만료 체크 태스크 시작 (매일 1회)
+            self.ssl_check_task = asyncio.create_task(self._ssl_expiry_check_loop())
+
             logger.info(f"Monitoring scheduler started with {len(projects)} projects")
 
     async def stop(self):
@@ -74,6 +100,11 @@ class MonitoringScheduler:
             # 모든 모니터링 작업 중지
             for project_id in list(self.tasks.keys()):
                 await self.stop_monitoring(project_id)
+
+            # SSL 체크 태스크 중지
+            if self.ssl_check_task:
+                self.ssl_check_task.cancel()
+                self.ssl_check_task = None
 
             # Playwright 서비스 정리
             if self.playwright_service:
@@ -170,7 +201,17 @@ class MonitoringScheduler:
                     alert_threshold=alert_threshold
                 )
 
+                # 6. 성능 임계값 체크 (응답 시간 초과 알림)
+                if is_available and http_status.response_time:
+                    await self._handle_performance_alert(
+                        project=project,
+                        response_time=http_status.response_time
+                    )
+
                 self.db.commit()
+
+                # 7. WebSocket으로 실시간 업데이트 전송
+                await self._send_websocket_update(project, log)
 
                 # 다음 모니터링까지 대기
                 await asyncio.sleep(interval)
@@ -311,6 +352,213 @@ class MonitoringScheduler:
                     logger.error(f"Failed to send recovery notification: {e}")
 
             self.consecutive_failures[project_id] = 0
+
+    async def _handle_performance_alert(
+        self,
+        project: Project,
+        response_time: float
+    ):
+        """성능 임계값 초과 시 알림 처리"""
+        project_id = project.id
+        time_limit = project.time_limit or 5  # 기본 5초
+        time_limit_interval = project.time_limit_interval or 15  # 기본 15분
+
+        # 응답 시간이 임계값을 초과하지 않으면 무시
+        if response_time <= time_limit:
+            return
+
+        # 마지막 알림으로부터 충분한 시간이 지났는지 확인
+        last_alert_time = self.last_slow_alert.get(project_id)
+        if last_alert_time:
+            elapsed_minutes = (datetime.now() - last_alert_time).total_seconds() / 60
+            if elapsed_minutes < time_limit_interval:
+                logger.debug(
+                    f"Skipping slow response alert for project {project_id}: "
+                    f"last alert was {elapsed_minutes:.1f} minutes ago"
+                )
+                return
+
+        # 성능 임계값 초과 알림 생성
+        alert_message = (
+            f"응답 시간이 임계값을 초과했습니다. "
+            f"(현재: {response_time:.2f}초, 임계값: {time_limit}초)"
+        )
+
+        alert = MonitoringAlert(
+            project_id=project_id,
+            alert_type="slow_response",
+            message=alert_message,
+        )
+        self.db.add(alert)
+        self.last_slow_alert[project_id] = datetime.now()
+
+        logger.warning(f"Slow response alert for project {project_id}: {response_time:.2f}s > {time_limit}s")
+
+        # 알림 발송
+        try:
+            await self.notification_service.send_alert_notification(
+                project_id=project_id,
+                alert_type="slow_response",
+                message=alert_message,
+                details={
+                    "응답 시간": f"{response_time:.2f}초",
+                    "임계값": f"{time_limit}초",
+                    "초과량": f"{response_time - time_limit:.2f}초",
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to send slow response notification: {e}")
+
+    async def _send_websocket_update(self, project: Project, log: MonitoringLog):
+        """WebSocket으로 모니터링 업데이트 전송"""
+        try:
+            notify_update, _ = _get_ws_functions()
+            if notify_update:
+                await notify_update(
+                    user_id=project.user_id,
+                    project_id=project.id,
+                    log=log
+                )
+        except Exception as e:
+            logger.debug(f"WebSocket update failed (non-critical): {e}")
+
+    async def _ssl_expiry_check_loop(self):
+        """SSL/도메인 만료 체크 루프 (24시간마다 실행)"""
+        CHECK_INTERVAL = 24 * 60 * 60  # 24시간
+        WARNING_DAYS = [30, 14, 7, 3, 1]  # 알림을 보낼 D-day
+
+        while self.is_running:
+            try:
+                logger.info("Starting SSL/Domain expiry check...")
+                projects = self.db.query(Project).filter(
+                    Project.is_active.is_(True),
+                    Project.deleted_at.is_(None)
+                ).all()
+
+                for project in projects:
+                    if not project.url or not project.is_https:
+                        continue
+
+                    await self._check_ssl_expiry(project, WARNING_DAYS)
+                    await self._check_domain_expiry(project, WARNING_DAYS)
+
+                logger.info(f"SSL/Domain expiry check completed for {len(projects)} projects")
+                await asyncio.sleep(CHECK_INTERVAL)
+
+            except asyncio.CancelledError:
+                logger.info("SSL expiry check task cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in SSL expiry check loop: {e}")
+                await asyncio.sleep(3600)  # 오류 시 1시간 후 재시도
+
+    async def _check_ssl_expiry(self, project: Project, warning_days: list):
+        """SSL 인증서 만료 체크 및 알림"""
+        try:
+            ssl_result = await self.monitoring_service.check_ssl_status(project)
+
+            if not ssl_result.get("is_valid") or not ssl_result.get("expiry_date"):
+                return
+
+            expiry_date = ssl_result["expiry_date"]
+            days_remaining = (expiry_date - datetime.now()).days
+
+            # 이미 만료된 경우
+            if days_remaining < 0:
+                await self._send_expiry_alert(
+                    project=project,
+                    alert_type="ssl_expired",
+                    message=f"SSL 인증서가 만료되었습니다! (만료일: {expiry_date.strftime('%Y-%m-%d')})",
+                    days_remaining=days_remaining
+                )
+                return
+
+            # 경고 일수에 해당하는 경우 알림
+            if days_remaining in warning_days:
+                await self._send_expiry_alert(
+                    project=project,
+                    alert_type="ssl_expiring",
+                    message=f"SSL 인증서가 {days_remaining}일 후 만료됩니다. (만료일: {expiry_date.strftime('%Y-%m-%d')})",
+                    days_remaining=days_remaining
+                )
+
+        except Exception as e:
+            logger.error(f"Error checking SSL expiry for project {project.id}: {e}")
+
+    async def _check_domain_expiry(self, project: Project, warning_days: list):
+        """도메인 만료 체크 및 알림"""
+        try:
+            expiry_result = await self.monitoring_service.check_domain_expiry(project)
+
+            if not expiry_result:
+                return
+
+            # whois 결과가 리스트인 경우 첫 번째 값 사용
+            expiry_date = expiry_result[0] if isinstance(expiry_result, list) else expiry_result
+            if not expiry_date:
+                return
+
+            days_remaining = (expiry_date - datetime.now()).days
+
+            # 이미 만료된 경우
+            if days_remaining < 0:
+                await self._send_expiry_alert(
+                    project=project,
+                    alert_type="domain_expired",
+                    message=f"도메인이 만료되었습니다! (만료일: {expiry_date.strftime('%Y-%m-%d')})",
+                    days_remaining=days_remaining
+                )
+                return
+
+            # 경고 일수에 해당하는 경우 알림
+            if days_remaining in warning_days:
+                await self._send_expiry_alert(
+                    project=project,
+                    alert_type="domain_expiring",
+                    message=f"도메인이 {days_remaining}일 후 만료됩니다. (만료일: {expiry_date.strftime('%Y-%m-%d')})",
+                    days_remaining=days_remaining
+                )
+
+        except Exception as e:
+            logger.error(f"Error checking domain expiry for project {project.id}: {e}")
+
+    async def _send_expiry_alert(
+        self,
+        project: Project,
+        alert_type: str,
+        message: str,
+        days_remaining: int
+    ):
+        """SSL/도메인 만료 알림 발송"""
+        project_id = project.id
+
+        # 알림 생성
+        alert = MonitoringAlert(
+            project_id=project_id,
+            alert_type=alert_type,
+            message=message,
+        )
+        self.db.add(alert)
+        self.db.commit()
+
+        logger.warning(f"{alert_type} alert for project {project_id}: {message}")
+
+        # 알림 발송
+        try:
+            severity = "critical" if days_remaining <= 7 else "warning"
+            await self.notification_service.send_alert_notification(
+                project_id=project_id,
+                alert_type=alert_type,
+                message=message,
+                details={
+                    "프로젝트": project.title,
+                    "URL": project.url,
+                    "남은 일수": f"{days_remaining}일",
+                    "심각도": severity,
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to send {alert_type} notification: {e}")
 
     async def check_now(self, project_id: int) -> Optional[MonitoringLog]:
         """즉시 모니터링 체크 실행 (수동 트리거)"""

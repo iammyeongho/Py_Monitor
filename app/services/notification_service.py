@@ -260,6 +260,15 @@ class NotificationService:
             elif alert_type == "recovery":
                 subject = f"[PyMonitor] 복구 알림 - {project.title}"
                 body = self._create_recovery_email_body(project, message, details)
+            elif alert_type == "slow_response":
+                subject = f"[PyMonitor] 성능 경고 - {project.title}"
+                body = self._create_performance_email_body(project, message, details)
+            elif alert_type in ("ssl_expiring", "ssl_expired"):
+                subject = f"[PyMonitor] SSL 인증서 알림 - {project.title}"
+                body = self._create_ssl_email_body(project, message, details)
+            elif alert_type in ("domain_expiring", "domain_expired"):
+                subject = f"[PyMonitor] 도메인 알림 - {project.title}"
+                body = self._create_domain_email_body(project, message, details)
             else:
                 subject = f"[PyMonitor] 알림 - {project.title}"
                 body = self._create_general_email_body(project, message, details)
@@ -329,6 +338,18 @@ class NotificationService:
             color = "#31b46e"
             emoji = ":white_check_mark:"
             title = "복구 알림"
+        elif alert_type == "slow_response":
+            color = "#f59e0b"
+            emoji = ":snail:"
+            title = "성능 경고"
+        elif alert_type in ("ssl_expiring", "ssl_expired"):
+            color = "#dc2626" if "expired" in alert_type else "#f59e0b"
+            emoji = ":lock:" if "expiring" in alert_type else ":unlock:"
+            title = "SSL 인증서 만료" if "expired" in alert_type else "SSL 인증서 만료 예정"
+        elif alert_type in ("domain_expiring", "domain_expired"):
+            color = "#dc2626" if "expired" in alert_type else "#8b5cf6"
+            emoji = ":globe_with_meridians:"
+            title = "도메인 만료" if "expired" in alert_type else "도메인 만료 예정"
         else:
             color = "#f5a623"
             emoji = ":warning:"
@@ -471,6 +492,142 @@ class NotificationService:
                         <strong>URL:</strong> <a href="{project.url}" style="color: #222;">{project.url}</a>
                     </p>
                     <p style="color: #333; margin: 20px 0;">{message}</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                        알림 시간: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+                    </p>
+                </div>
+                <div style="background-color: #f5f5f5; padding: 15px; text-align: center; color: #999; font-size: 12px;">
+                    PyMonitor 자동 알림
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+    def _create_performance_email_body(
+        self,
+        project: Project,
+        message: str,
+        details: Optional[dict] = None
+    ) -> str:
+        """성능 경고 이메일 본문 생성"""
+        details_html = ""
+        if details:
+            details_html = "<ul style='list-style: none; padding: 0;'>"
+            for key, value in details.items():
+                details_html += f"<li style='padding: 8px 0; border-bottom: 1px solid #eee;'><strong>{key}:</strong> {value}</li>"
+            details_html += "</ul>"
+
+        return f"""
+        <html>
+        <body style="font-family: 'Noto Sans KR', sans-serif; padding: 20px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #fff; border-radius: 12px; overflow: hidden;">
+                <div style="background-color: #f59e0b; color: #fff; padding: 20px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 24px;">성능 경고</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #222; margin-top: 0;">{project.title}</h2>
+                    <p style="color: #666; font-size: 14px;">
+                        <strong>URL:</strong> <a href="{project.url}" style="color: #222;">{project.url}</a>
+                    </p>
+                    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                        <p style="color: #92400e; margin: 0;">{message}</p>
+                    </div>
+                    {details_html}
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                        알림 시간: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+                    </p>
+                </div>
+                <div style="background-color: #f5f5f5; padding: 15px; text-align: center; color: #999; font-size: 12px;">
+                    PyMonitor 자동 알림
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+    def _create_ssl_email_body(
+        self,
+        project: Project,
+        message: str,
+        details: Optional[dict] = None
+    ) -> str:
+        """SSL 알림 이메일 본문 생성"""
+        is_expired = "만료되었습니다" in message
+        color = "#dc2626" if is_expired else "#f59e0b"
+        bg_color = "#fef2f2" if is_expired else "#fef3c7"
+        text_color = "#991b1b" if is_expired else "#92400e"
+
+        details_html = ""
+        if details:
+            details_html = "<ul style='list-style: none; padding: 0;'>"
+            for key, value in details.items():
+                details_html += f"<li style='padding: 8px 0; border-bottom: 1px solid #eee;'><strong>{key}:</strong> {value}</li>"
+            details_html += "</ul>"
+
+        return f"""
+        <html>
+        <body style="font-family: 'Noto Sans KR', sans-serif; padding: 20px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #fff; border-radius: 12px; overflow: hidden;">
+                <div style="background-color: {color}; color: #fff; padding: 20px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 24px;">SSL 인증서 알림</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #222; margin-top: 0;">{project.title}</h2>
+                    <p style="color: #666; font-size: 14px;">
+                        <strong>URL:</strong> <a href="{project.url}" style="color: #222;">{project.url}</a>
+                    </p>
+                    <div style="background-color: {bg_color}; border-left: 4px solid {color}; padding: 15px; margin: 20px 0;">
+                        <p style="color: {text_color}; margin: 0;">{message}</p>
+                    </div>
+                    {details_html}
+                    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                        알림 시간: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
+                    </p>
+                </div>
+                <div style="background-color: #f5f5f5; padding: 15px; text-align: center; color: #999; font-size: 12px;">
+                    PyMonitor 자동 알림
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+    def _create_domain_email_body(
+        self,
+        project: Project,
+        message: str,
+        details: Optional[dict] = None
+    ) -> str:
+        """도메인 알림 이메일 본문 생성"""
+        is_expired = "만료되었습니다" in message
+        color = "#dc2626" if is_expired else "#8b5cf6"
+        bg_color = "#fef2f2" if is_expired else "#f5f3ff"
+        text_color = "#991b1b" if is_expired else "#6d28d9"
+
+        details_html = ""
+        if details:
+            details_html = "<ul style='list-style: none; padding: 0;'>"
+            for key, value in details.items():
+                details_html += f"<li style='padding: 8px 0; border-bottom: 1px solid #eee;'><strong>{key}:</strong> {value}</li>"
+            details_html += "</ul>"
+
+        return f"""
+        <html>
+        <body style="font-family: 'Noto Sans KR', sans-serif; padding: 20px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #fff; border-radius: 12px; overflow: hidden;">
+                <div style="background-color: {color}; color: #fff; padding: 20px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 24px;">도메인 알림</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <h2 style="color: #222; margin-top: 0;">{project.title}</h2>
+                    <p style="color: #666; font-size: 14px;">
+                        <strong>URL:</strong> <a href="{project.url}" style="color: #222;">{project.url}</a>
+                    </p>
+                    <div style="background-color: {bg_color}; border-left: 4px solid {color}; padding: 15px; margin: 20px 0;">
+                        <p style="color: {text_color}; margin: 0;">{message}</p>
+                    </div>
+                    {details_html}
                     <p style="color: #999; font-size: 12px; margin-top: 30px;">
                         알림 시간: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC
                     </p>
