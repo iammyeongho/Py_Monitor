@@ -7,14 +7,31 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.models.monitoring import MonitoringLog
+from app.models.monitoring import MonitoringLog, MonitoringAlert
 from app.models.project import Project
+from app.models.ssl_domain import SSLDomainStatus
 from app.schemas.monitoring import (
     AvailabilityChartData,
     ChartDataPoint,
     DashboardChartData,
     ResponseTimeChartData,
 )
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class DashboardStats(BaseModel):
+    """대시보드 통계 요약"""
+    total_projects: int
+    active_projects: int
+    available_projects: int
+    unavailable_projects: int
+    overall_availability: float
+    avg_response_time: Optional[float]
+    total_alerts: int
+    unresolved_alerts: int
+    ssl_expiring_soon: int
+    domain_expiring_soon: int
 
 router = APIRouter()
 
@@ -210,4 +227,104 @@ def get_project_availability_chart(
         available_checks=available_checks,
         availability_percentage=round(availability_pct, 2),
         data_points=data_points,
+    )
+
+
+@router.get("/charts/stats", response_model=DashboardStats)
+def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """대시보드 통계 요약 데이터를 조회합니다."""
+    # 사용자의 프로젝트 조회
+    projects = (
+        db.query(Project)
+        .filter(Project.user_id == current_user.id, Project.deleted_at.is_(None))
+        .all()
+    )
+
+    total_projects = len(projects)
+    active_projects = sum(1 for p in projects if p.is_active)
+
+    # 최근 로그 기반 가용성 체크
+    available_count = 0
+    unavailable_count = 0
+    response_times = []
+
+    for project in projects:
+        if not project.is_active:
+            continue
+
+        # 최신 로그 조회
+        latest_log = (
+            db.query(MonitoringLog)
+            .filter(MonitoringLog.project_id == project.id)
+            .order_by(MonitoringLog.created_at.desc())
+            .first()
+        )
+
+        if latest_log:
+            if latest_log.is_available:
+                available_count += 1
+            else:
+                unavailable_count += 1
+
+            if latest_log.response_time:
+                response_times.append(latest_log.response_time * 1000)
+
+    # 가용률 계산
+    total_checked = available_count + unavailable_count
+    overall_availability = (
+        (available_count / total_checked * 100) if total_checked > 0 else 100.0
+    )
+
+    # 평균 응답 시간
+    avg_response_time = (
+        sum(response_times) / len(response_times) if response_times else None
+    )
+
+    # 알림 통계
+    project_ids = [p.id for p in projects]
+    total_alerts = (
+        db.query(MonitoringAlert)
+        .filter(MonitoringAlert.project_id.in_(project_ids))
+        .count()
+    ) if project_ids else 0
+
+    unresolved_alerts = (
+        db.query(MonitoringAlert)
+        .filter(
+            MonitoringAlert.project_id.in_(project_ids),
+            MonitoringAlert.is_resolved.is_(False)
+        )
+        .count()
+    ) if project_ids else 0
+
+    # SSL/도메인 만료 임박 체크
+    ssl_expiring = 0
+    domain_expiring = 0
+
+    for project in projects:
+        ssl_status = (
+            db.query(SSLDomainStatus)
+            .filter(SSLDomainStatus.project_id == project.id)
+            .first()
+        )
+        if ssl_status:
+            if ssl_status.is_ssl_expiring_soon:
+                ssl_expiring += 1
+            if ssl_status.is_domain_expiring_soon:
+                domain_expiring += 1
+
+    return DashboardStats(
+        total_projects=total_projects,
+        active_projects=active_projects,
+        available_projects=available_count,
+        unavailable_projects=unavailable_count,
+        overall_availability=round(overall_availability, 2),
+        avg_response_time=round(avg_response_time, 2) if avg_response_time else None,
+        total_alerts=total_alerts,
+        unresolved_alerts=unresolved_alerts,
+        ssl_expiring_soon=ssl_expiring,
+        domain_expiring_soon=domain_expiring,
     )
