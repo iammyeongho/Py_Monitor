@@ -65,7 +65,7 @@ class MonitoringScheduler:
     async def _get_playwright_service(self) -> PlaywrightMonitorService:
         """Playwright 서비스 인스턴스 반환 (지연 초기화)"""
         if self.playwright_service is None:
-            self.playwright_service = PlaywrightMonitorService()
+            self.playwright_service = PlaywrightMonitorService(self.db)
         return self.playwright_service
 
     async def start(self):

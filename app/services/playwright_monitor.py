@@ -291,6 +291,11 @@ class PlaywrightMonitorService:
         self.db.add(log)
         self.db.commit()
 
+    async def close(self):
+        """서비스 종료 (리소스 정리)"""
+        # Playwright는 매 호출시 브라우저를 열고 닫으므로 별도 정리 불필요
+        pass
+
     def get_metrics_dict(self, metrics: PlaywrightMetrics) -> dict:
         """메트릭을 딕셔너리로 변환"""
         return {
