@@ -50,19 +50,89 @@ def create_project(
 def read_projects(
     skip: int = 0,
     limit: int = 100,
+    category: Optional[str] = None,
+    tag: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """현재 사용자의 모든 프로젝트를 조회합니다."""
-    projects = (
+    """현재 사용자의 모든 프로젝트를 조회합니다.
+
+    Args:
+        skip: 건너뛸 항목 수
+        limit: 반환할 최대 항목 수
+        category: 카테고리로 필터링
+        tag: 태그로 필터링 (부분 일치)
+    """
+    query = (
         db.query(Project)
         .filter(Project.user_id == current_user.id, Project.is_active.is_(True))
+    )
+
+    # 카테고리 필터링
+    if category:
+        query = query.filter(Project.category == category)
+
+    # 태그 필터링 (부분 일치)
+    if tag:
+        query = query.filter(Project.tags.ilike(f"%{tag}%"))
+
+    projects = (
+        query
         .order_by(Project.created_at.desc())
         .offset(skip)
         .limit(limit)
         .all()
     )
     return projects
+
+
+@router.get("/categories", response_model=List[str])
+def get_categories(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """사용자의 프로젝트 카테고리 목록을 조회합니다."""
+    categories = (
+        db.query(Project.category)
+        .filter(
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+            Project.category.isnot(None),
+            Project.category != ""
+        )
+        .distinct()
+        .all()
+    )
+    return [c[0] for c in categories if c[0]]
+
+
+@router.get("/tags", response_model=List[str])
+def get_tags(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """사용자의 프로젝트에서 사용된 모든 태그를 조회합니다."""
+    projects = (
+        db.query(Project.tags)
+        .filter(
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+            Project.tags.isnot(None),
+            Project.tags != ""
+        )
+        .all()
+    )
+
+    # 모든 태그 수집 (중복 제거)
+    all_tags = set()
+    for (tags_str,) in projects:
+        if tags_str:
+            for tag in tags_str.split(","):
+                tag = tag.strip()
+                if tag:
+                    all_tags.add(tag)
+
+    return sorted(list(all_tags))
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)

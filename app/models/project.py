@@ -71,6 +71,8 @@ class Project(Base):
     expiry_interval = Column(Integer, default=7)  # 만료일 알림 주기 (일)
     time_limit = Column(Integer, default=5)  # 응답 시간 제한 (초)
     time_limit_interval = Column(Integer, default=15)  # 제한 초과 시 알림 주기 (분)
+    category = Column(String(50), nullable=True)  # 프로젝트 카테고리
+    tags = Column(String(500), nullable=True)  # 태그 (쉼표 구분)
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())  # 생성 시간
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())  # 수정 시간
     deleted_at = Column(DateTime, nullable=True)  # 삭제 시간
@@ -161,3 +163,14 @@ class Project(Base):
     def is_response_time_exceeded(self, response_time: float) -> bool:
         """응답 시간 제한 초과 여부"""
         return response_time > self.time_limit if self.time_limit else False
+
+    @property
+    def tag_list(self) -> list:
+        """태그 목록"""
+        if not self.tags:
+            return []
+        return [t.strip() for t in self.tags.split(",") if t.strip()]
+
+    def has_tag(self, tag: str) -> bool:
+        """특정 태그 포함 여부"""
+        return tag.lower() in [t.lower() for t in self.tag_list]
