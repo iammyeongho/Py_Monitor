@@ -29,6 +29,18 @@
     --gray-800: #333333;
     --gray-900: #222222;
 
+    /* Semantic Colors (Theme-aware) */
+    --bg-primary: var(--white);
+    --bg-secondary: var(--gray-50);
+    --bg-tertiary: var(--gray-100);
+    --text-primary: var(--gray-900);
+    --text-secondary: var(--gray-600);
+    --text-tertiary: var(--gray-500);
+    --border-color: var(--gray-200);
+    --card-bg: var(--white);
+    --header-bg: var(--white);
+    --modal-bg: var(--white);
+
     /* Typography */
     --font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-size-xs: 11px;
@@ -64,4 +76,89 @@
     --transition-fast: 0.15s ease;
     --transition-normal: 0.25s ease;
     --transition-slow: 0.35s ease;
+}
+
+/* ========================================
+   Dark Mode
+   ======================================== */
+[data-theme="dark"] {
+    /* Semantic Colors - Dark Theme */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-tertiary: #2d2d2d;
+    --text-primary: #e5e5e5;
+    --text-secondary: #a0a0a0;
+    --text-tertiary: #707070;
+    --border-color: #3d3d3d;
+    --card-bg: #242424;
+    --header-bg: #1a1a1a;
+    --modal-bg: #242424;
+
+    /* Adjusted shadows for dark mode */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+
+    /* Primary colors adjustment */
+    --primary: #e5e5e5;
+    --primary-light: #d0d0d0;
+    --secondary: #2d2d2d;
+}
+
+/* ========================================
+   Floating Theme Toggle Button
+   ======================================== */
+.theme-floating-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-normal);
+}
+
+.theme-floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-xl);
+}
+
+.theme-floating-btn:active {
+    transform: scale(0.95);
+}
+
+.theme-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+}
+
+.theme-btn-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* 모바일에서 위치 조정 */
+@media (max-width: 768px) {
+    .theme-floating-btn {
+        bottom: 16px;
+        right: 16px;
+        width: 44px;
+        height: 44px;
+    }
+
+    .theme-btn-icon svg {
+        width: 20px;
+        height: 20px;
+    }
 }

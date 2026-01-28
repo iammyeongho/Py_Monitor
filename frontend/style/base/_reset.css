@@ -17,10 +17,11 @@ html {
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-md);
-    color: var(--gray-900);
-    background-color: var(--gray-50);
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
     line-height: 1.5;
     min-height: 100vh;
+    transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
 a {
