@@ -17,6 +17,11 @@ from pydantic import BaseModel, EmailStr, Field
 from .base import BaseSchema
 
 
+# 테마 옵션
+THEME_OPTIONS = ["light", "dark", "system"]
+LANGUAGE_OPTIONS = ["ko", "en"]
+
+
 # 기본 User 스키마
 class UserBase(BaseModel):
     """사용자 기본 정보"""
@@ -26,6 +31,9 @@ class UserBase(BaseModel):
     profile_image: Optional[str] = None
     phone: Optional[str] = None
     email_notifications: Optional[bool] = True
+    theme: Optional[str] = "light"
+    language: Optional[str] = "ko"
+    timezone: Optional[str] = "Asia/Seoul"
 
 
 # User 생성 시 사용할 스키마
@@ -43,7 +51,33 @@ class UserUpdate(BaseModel):
     profile_image: Optional[str] = None
     phone: Optional[str] = None
     email_notifications: Optional[bool] = None
+    theme: Optional[str] = None
+    language: Optional[str] = None
+    timezone: Optional[str] = None
     password: Optional[str] = Field(None, min_length=8)
+
+
+# 사용자 설정 스키마
+class UserSettings(BaseModel):
+    """사용자 설정 스키마"""
+
+    theme: str = "light"
+    language: str = "ko"
+    timezone: str = "Asia/Seoul"
+    email_notifications: bool = True
+
+    class Config:
+        from_attributes = True
+
+
+# 사용자 설정 업데이트 스키마
+class UserSettingsUpdate(BaseModel):
+    """사용자 설정 업데이트 스키마"""
+
+    theme: Optional[str] = None
+    language: Optional[str] = None
+    timezone: Optional[str] = None
+    email_notifications: Optional[bool] = None
 
 
 # User 응답 시 사용할 스키마

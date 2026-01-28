@@ -22,6 +22,8 @@ from app.schemas.user import (
     Token,
     UserCreate,
     UserResponse,
+    UserSettings,
+    UserSettingsUpdate,
     UserUpdate,
 )
 
@@ -142,3 +144,56 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     return db_user
+
+
+# =====================
+# 사용자 설정 엔드포인트
+# =====================
+
+
+@router.get("/me/settings", response_model=UserSettings)
+def get_user_settings(current_user: User = Depends(get_current_active_user)):
+    """현재 사용자의 설정을 조회합니다."""
+    return UserSettings(
+        theme=current_user.theme or "light",
+        language=current_user.language or "ko",
+        timezone=current_user.timezone or "Asia/Seoul",
+        email_notifications=current_user.email_notifications,
+    )
+
+
+@router.put("/me/settings", response_model=UserSettings)
+def update_user_settings(
+    settings: UserSettingsUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 설정을 업데이트합니다."""
+    update_data = settings.model_dump(exclude_unset=True)
+
+    # 테마 값 검증
+    if "theme" in update_data and update_data["theme"] not in ["light", "dark", "system"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid theme. Must be 'light', 'dark', or 'system'"
+        )
+
+    # 언어 값 검증
+    if "language" in update_data and update_data["language"] not in ["ko", "en"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid language. Must be 'ko' or 'en'"
+        )
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    db.commit()
+    db.refresh(current_user)
+
+    return UserSettings(
+        theme=current_user.theme or "light",
+        language=current_user.language or "ko",
+        timezone=current_user.timezone or "Asia/Seoul",
+        email_notifications=current_user.email_notifications,
+    )

@@ -31,6 +31,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     email_notifications = Column(Boolean, default=True)  # 이메일 알림 설정
+    theme = Column(String(20), default="light")  # 테마 설정 (light/dark/system)
+    language = Column(String(10), default="ko")  # 언어 설정
+    timezone = Column(String(50), default="Asia/Seoul")  # 타임존 설정
     last_login_at = Column(DateTime(timezone=True), nullable=True)  # 마지막 로그인 시간
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
