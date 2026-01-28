@@ -43,13 +43,24 @@ app.add_middleware(
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """요청 로깅 미들웨어"""
 
+    # 로깅에서 제외할 경로 (정적 파일, health check 등)
+    EXCLUDED_PATHS = (
+        "/frontend/",
+        "/health",
+        "/favicon.ico",
+    )
+
     async def dispatch(self, request, call_next):
         start_time = time.time()
         response = await call_next(request)
         process_time = time.time() - start_time
-        logger.info(
-            f"{request.method} {request.url.path} completed in {process_time:.2f}s"
-        )
+
+        # 정적 파일과 빈번한 요청은 로깅 제외
+        path = request.url.path
+        if not path.startswith(self.EXCLUDED_PATHS):
+            logger.info(
+                f"{request.method} {path} completed in {process_time:.2f}s"
+            )
         return response
 
 
