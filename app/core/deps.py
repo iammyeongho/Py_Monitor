@@ -135,3 +135,53 @@ async def get_current_superuser(
             status_code=400, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+async def get_current_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    관리자 역할 사용자 가져오기 (role=admin 또는 is_superuser)
+
+    사용자 관리, 시스템 설정 등 관리자 전용 엔드포인트에서 사용합니다.
+    """
+    if not (current_user.is_superuser or current_user.role == "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자 권한이 필요합니다",
+        )
+    return current_user
+
+
+async def get_current_manager_or_admin(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    매니저 이상 역할 사용자 가져오기 (role=manager, admin 또는 is_superuser)
+
+    프로젝트 관리 등 쓰기 권한이 필요한 엔드포인트에서 사용합니다.
+    """
+    allowed_roles = ("admin", "manager")
+    if not (current_user.is_superuser or current_user.role in allowed_roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="매니저 이상 권한이 필요합니다",
+        )
+    return current_user
+
+
+async def get_non_viewer_user(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """
+    뷰어가 아닌 사용자 (role != viewer)
+
+    프로젝트 생성/수정/삭제 등 쓰기 작업에서 사용합니다.
+    viewer 역할은 읽기만 가능합니다.
+    """
+    if current_user.role == "viewer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="읽기 전용 계정은 이 작업을 수행할 수 없습니다",
+        )
+    return current_user

@@ -30,6 +30,7 @@ class User(Base):
     phone = Column(String(20), nullable=True)  # 연락처
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
+    role = Column(String(20), default="user")  # admin, manager, user, viewer
     email_notifications = Column(Boolean, default=True)  # 이메일 알림 설정
     theme = Column(String(20), default="light")  # 테마 설정 (light/dark/system)
     language = Column(String(10), default="ko")  # 언어 설정
@@ -72,3 +73,18 @@ class User(Base):
     def has_permission(self, resource_user_id: int) -> bool:
         """리소스 접근 권한 확인 (본인 또는 관리자)"""
         return self.id == resource_user_id or self.is_superuser
+
+    @property
+    def is_admin(self) -> bool:
+        """관리자 여부 (superuser 또는 role=admin)"""
+        return self.is_superuser or self.role == "admin"
+
+    @property
+    def is_manager_or_above(self) -> bool:
+        """매니저 이상 권한"""
+        return self.is_admin or self.role == "manager"
+
+    @property
+    def is_viewer_only(self) -> bool:
+        """읽기 전용 사용자"""
+        return self.role == "viewer"

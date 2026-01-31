@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_db
+from app.core.deps import get_db, get_non_viewer_user
 from app.core.security import get_current_user
 from app.models.project import Project
 from app.schemas.project import (
@@ -32,7 +32,7 @@ router = APIRouter()
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(get_non_viewer_user),
 ):
     """새로운 프로젝트를 생성합니다."""
     project_data = project.model_dump()
