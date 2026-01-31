@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     )  # 기본 체크 간격 (초)
     DEFAULT_TIMEOUT: int = int(os.getenv("DEFAULT_TIMEOUT", "30"))  # 기본 타임아웃 (초)
 
+    # Redis 설정 (캐싱)
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_ENABLED: bool = os.getenv("REDIS_ENABLED", "false").lower() == "true"
+    CACHE_DEFAULT_TTL: int = int(os.getenv("CACHE_DEFAULT_TTL", "300"))  # 기본 TTL (초)
+
     # 로깅 설정
     # 로그 관련 설정
     LOG_LEVEL: str = os.getenv(

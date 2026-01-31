@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.cache import cache
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.monitoring import MonitoringLog, MonitoringAlert
@@ -235,7 +236,13 @@ def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """대시보드 통계 요약 데이터를 조회합니다."""
+    """대시보드 통계 요약 데이터를 조회합니다. 결과는 30초간 캐싱됩니다."""
+    # 캐시 확인 (30초 TTL)
+    cache_key = f"dashboard:stats:{current_user.id}"
+    cached = cache.get_json(cache_key)
+    if cached:
+        return DashboardStats(**cached)
+
     # 사용자의 프로젝트 조회
     projects = (
         db.query(Project)
@@ -316,7 +323,7 @@ def get_dashboard_stats(
             if ssl_status.is_domain_expiring_soon:
                 domain_expiring += 1
 
-    return DashboardStats(
+    response = DashboardStats(
         total_projects=total_projects,
         active_projects=active_projects,
         available_projects=available_count,
@@ -328,3 +335,8 @@ def get_dashboard_stats(
         ssl_expiring_soon=ssl_expiring,
         domain_expiring_soon=domain_expiring,
     )
+
+    # 결과를 캐시에 저장 (30초 TTL)
+    cache.set_json(cache_key, response.model_dump(mode="json"), ttl=30)
+
+    return response
