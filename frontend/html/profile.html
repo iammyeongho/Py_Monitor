@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로필 설정 | PyMonitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/frontend/style/main.css">
+</head>
+<body>
+  <!-- 헤더 (공통 컴포넌트) -->
+  <header id="app-header" class="header"></header>
+
+  <!-- 메인 컨텐츠 -->
+  <main class="main-content">
+    <div class="container">
+      <div class="page-header">
+        <h1 class="page-title">프로필 설정</h1>
+      </div>
+
+      <div class="profile-layout">
+        <!-- 프로필 정보 섹션 -->
+        <div class="form-card">
+          <div class="form-section">
+            <h2 class="form-section-title">기본 정보</h2>
+            <form id="profile-form">
+              <div class="form-group">
+                <label class="form-label" for="profile-email">이메일</label>
+                <input type="email" class="form-input" id="profile-email" disabled>
+                <span class="form-hint">이메일은 변경할 수 없습니다</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profile-name">이름</label>
+                <input type="text" class="form-input" id="profile-name" placeholder="이름을 입력하세요">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="profile-phone">전화번호</label>
+                <input type="tel" class="form-input" id="profile-phone" placeholder="전화번호를 입력하세요">
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">정보 저장</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 비밀번호 변경 섹션 -->
+        <div class="form-card">
+          <div class="form-section">
+            <h2 class="form-section-title">비밀번호 변경</h2>
+            <form id="password-form">
+              <div class="form-group">
+                <label class="form-label" for="current-password">현재 비밀번호 <span class="required">*</span></label>
+                <input type="password" class="form-input" id="current-password" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="new-password">새 비밀번호 <span class="required">*</span></label>
+                <input type="password" class="form-input" id="new-password" required minlength="8">
+                <span class="form-hint">8자 이상 입력하세요</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="confirm-password">새 비밀번호 확인 <span class="required">*</span></label>
+                <input type="password" class="form-input" id="confirm-password" required minlength="8">
+              </div>
+              <div id="password-error" class="form-error" style="display: none;"></div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">비밀번호 변경</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 알림 설정 섹션 -->
+        <div class="form-card">
+          <div class="form-section">
+            <h2 class="form-section-title">알림 설정</h2>
+            <form id="notification-form">
+              <div class="form-group">
+                <label class="form-label form-checkbox">
+                  <input type="checkbox" id="email-notifications" checked>
+                  <span>이메일 알림 수신</span>
+                </label>
+                <span class="form-hint">장애 발생, SSL 만료 등의 알림을 이메일로 받습니다</span>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">알림 설정 저장</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- 계정 정보 섹션 -->
+        <div class="form-card">
+          <div class="form-section">
+            <h2 class="form-section-title">계정 정보</h2>
+            <div class="profile-info-grid">
+              <div class="profile-info-item">
+                <span class="profile-info-label">가입일</span>
+                <span class="profile-info-value" id="profile-created-at">-</span>
+              </div>
+              <div class="profile-info-item">
+                <span class="profile-info-label">마지막 로그인</span>
+                <span class="profile-info-value" id="profile-last-login">-</span>
+              </div>
+              <div class="profile-info-item">
+                <span class="profile-info-label">계정 상태</span>
+                <span class="profile-info-value" id="profile-status">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 토스트 알림 컨테이너 -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript -->
+  <script src="/frontend/js/core/utils.js"></script>
+  <script src="/frontend/js/auth.js"></script>
+  <script src="/frontend/js/components/toast.js"></script>
+  <script src="/frontend/js/components/header.js"></script>
+  <script src="/frontend/js/components/theme.js"></script>
+  <script src="/frontend/js/pages/profile.js"></script>
+</body>
+</html>

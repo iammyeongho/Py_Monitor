@@ -146,7 +146,7 @@ const ThemeManager = {
    */
   async saveToServer(theme) {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('token');
       if (!token) return;
 
       await fetch('/api/v1/auth/me/settings', {

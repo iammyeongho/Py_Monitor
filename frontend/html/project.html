@@ -8,21 +8,8 @@
   <link rel="stylesheet" href="/frontend/style/main.css">
 </head>
 <body>
-  <!-- 헤더 -->
-  <header class="header">
-    <div class="header-inner">
-      <a href="index.html" class="logo">PyMonitor</a>
-      <nav class="nav">
-        <a href="index.html" class="nav-link">대시보드</a>
-        <a href="project.html" class="nav-link active">프로젝트 등록</a>
-        <a href="tools.html" class="nav-link">도구</a>
-      </nav>
-      <div class="user-actions">
-        <span class="user-name" id="user-name"></span>
-        <button class="btn btn-secondary btn-sm" id="logout-btn">로그아웃</button>
-      </div>
-    </div>
-  </header>
+  <!-- 헤더 (공통 컴포넌트) -->
+  <header id="app-header" class="header"></header>
 
   <!-- 메인 컨텐츠 -->
   <main class="main-content">
@@ -113,37 +100,16 @@
   <script src="/frontend/js/auth.js"></script>
   <script src="/frontend/js/project.js"></script>
   <script src="/frontend/js/monitoring.js"></script>
+  <script src="/frontend/js/components/header.js"></script>
   <script src="/frontend/js/components/theme.js"></script>
   <script>
     // 페이지 로드 시 초기화
     document.addEventListener('DOMContentLoaded', () => {
       if (!auth.checkAuth()) return;
 
-      // 사용자 정보 표시
-      displayUserInfo();
-
-      // 이벤트 리스너 설정
-      setupEventListeners();
-    });
-
-    // 사용자 정보 표시
-    function displayUserInfo() {
-      const user = auth.getUser();
-      if (user) {
-        document.getElementById('user-name').textContent = user.full_name || user.email;
-      }
-    }
-
-    // 이벤트 리스너 설정
-    function setupEventListeners() {
-      // 로그아웃
-      document.getElementById('logout-btn').addEventListener('click', () => {
-        auth.logout();
-      });
-
-      // 폼 제출
+      // 폼 제출 이벤트
       document.getElementById('project-form').addEventListener('submit', handleSubmit);
-    }
+    });
 
     // 폼 제출 처리
     async function handleSubmit(e) {
@@ -228,6 +194,5 @@
       }, 3000);
     }
   </script>
-  <script src="/frontend/js/components/theme.js"></script>
 </body>
 </html>
