@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions.handlers import register_exception_handlers
+from app.core.rate_limit import RateLimitMiddleware
 from app.services.scheduler import MonitoringScheduler
 from app.db.session import SessionLocal
 
@@ -77,8 +78,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             )
 
 
-# 미들웨어 등록
+# 미들웨어 등록 (역순 실행: ErrorHandling -> RateLimit -> Logging)
 app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
 
 # 커스텀 예외 핸들러 등록
@@ -130,6 +132,12 @@ def index_redirect():
 def login_redirect():
     """login.html을 실제 경로로 리다이렉트"""
     return RedirectResponse(url="/frontend/html/login.html")
+
+
+@app.get("/status")
+def status_redirect():
+    """공개 상태 페이지로 리다이렉트"""
+    return RedirectResponse(url="/frontend/html/status.html")
 
 
 # 정적 파일 제공 설정 (API 라우터 이후에 마운트)

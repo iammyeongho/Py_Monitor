@@ -13,7 +13,6 @@ const dashboard = {
     init() {
         if (!auth.checkAuth()) return;
 
-        this.displayUserInfo();
         this.loadProjects();
         scheduler.init();
         chartManager.init();
@@ -21,28 +20,9 @@ const dashboard = {
     },
 
     /**
-     * 사용자 정보 표시
-     */
-    displayUserInfo() {
-        const user = auth.getUser();
-        if (user) {
-            const userNameEl = document.getElementById('user-name');
-            if (userNameEl) {
-                userNameEl.textContent = user.full_name || user.email;
-            }
-        }
-    },
-
-    /**
      * 이벤트 리스너 설정
      */
     setupEventListeners() {
-        // 로그아웃
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => auth.logout());
-        }
-
         // 설정 모달
         const closeSettingBtn = document.getElementById('close-setting-modal');
         const cancelSettingBtn = document.getElementById('cancel-setting');
@@ -388,6 +368,10 @@ const dashboard = {
      * 상세 설정 로드
      */
     async loadDetailSettings(projectId) {
+        // 프로젝트 공개 설정 로드 (프로젝트 데이터에서)
+        const proj = this.projects.find(p => p.id === projectId);
+        document.getElementById('detail-is-public').checked = proj?.is_public || false;
+
         try {
             const settings = await monitoring.getSettings(projectId);
             document.getElementById('detail-check-interval').value = settings.check_interval || 300;
@@ -454,6 +438,7 @@ const dashboard = {
 
         const alertEmail = document.getElementById('detail-alert-email').value.trim();
         const webhookUrl = document.getElementById('detail-webhook-url').value.trim();
+        const isPublic = document.getElementById('detail-is-public').checked;
 
         const settings = {
             check_interval: parseInt(document.getElementById('detail-check-interval').value),
@@ -468,7 +453,19 @@ const dashboard = {
         };
 
         try {
+            // 모니터링 설정 저장
             await monitoring.updateSettings(this.currentProjectId, settings);
+
+            // 프로젝트 공개 설정 저장
+            const proj = this.projects.find(p => p.id === this.currentProjectId);
+            if (proj && proj.is_public !== isPublic) {
+                await project.updateProject(this.currentProjectId, {
+                    title: proj.title,
+                    url: proj.url,
+                    is_public: isPublic,
+                });
+            }
+
             showToast('설정이 저장되었습니다.', 'success');
             this.closeDetailModal();
             this.loadProjects();

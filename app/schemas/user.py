@@ -20,6 +20,7 @@ from .base import BaseSchema
 # 테마 옵션
 THEME_OPTIONS = ["light", "dark", "system"]
 LANGUAGE_OPTIONS = ["ko", "en"]
+ROLE_OPTIONS = ["admin", "manager", "user", "viewer"]
 
 
 # 기본 User 스키마
@@ -57,6 +58,14 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(None, min_length=8)
 
 
+# 비밀번호 변경 스키마
+class PasswordChange(BaseModel):
+    """비밀번호 변경 요청"""
+
+    current_password: str
+    new_password: str = Field(..., min_length=8)
+
+
 # 사용자 설정 스키마
 class UserSettings(BaseModel):
     """사용자 설정 스키마"""
@@ -80,10 +89,19 @@ class UserSettingsUpdate(BaseModel):
     email_notifications: Optional[bool] = None
 
 
+# 관리자 전용 사용자 역할 변경 스키마
+class UserRoleUpdate(BaseModel):
+    """사용자 역할 변경 (관리자 전용)"""
+
+    role: str = Field(..., pattern="^(admin|manager|user|viewer)$")
+    is_active: Optional[bool] = None
+
+
 # User 응답 시 사용할 스키마
 class User(UserBase, BaseSchema):
     is_active: bool = True
     is_superuser: bool = False
+    role: str = "user"
     last_login_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
 

@@ -15,13 +15,16 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_active_user, get_db
+from app.core.deps import get_current_active_user, get_current_admin, get_db
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.user import User
 from app.schemas.user import (
+    ROLE_OPTIONS,
+    PasswordChange,
     Token,
     UserCreate,
     UserResponse,
+    UserRoleUpdate,
     UserSettings,
     UserSettingsUpdate,
     UserUpdate,
@@ -128,21 +131,92 @@ def update_user_me(
     return current_user
 
 
+@router.put("/me/password")
+def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """현재 비밀번호를 확인하고 새 비밀번호로 변경합니다."""
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 비밀번호가 올바르지 않습니다",
+        )
+
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    db.commit()
+    return {"message": "비밀번호가 변경되었습니다"}
+
+
 @router.get("/", response_model=List[UserResponse])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """모든 사용자를 조회합니다."""
+def read_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """모든 사용자를 조회합니다. (관리자 전용)"""
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-def read_user(user_id: int, db: Session = Depends(get_db)):
-    """특정 사용자를 조회합니다."""
+def read_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """특정 사용자를 조회합니다. (관리자 전용)"""
     db_user = db.query(User).filter(User.id == user_id).first()
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
+    return db_user
+
+
+@router.put("/{user_id}/role", response_model=UserResponse)
+def update_user_role(
+    user_id: int,
+    role_update: UserRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """사용자 역할을 변경합니다. (관리자 전용)"""
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    # 자기 자신의 역할은 변경할 수 없음
+    if db_user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="자신의 역할은 변경할 수 없습니다",
+        )
+
+    if role_update.role not in ROLE_OPTIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid role. Must be one of: {', '.join(ROLE_OPTIONS)}",
+        )
+
+    db_user.role = role_update.role
+
+    # admin 역할이면 is_superuser도 동기화
+    if role_update.role == "admin":
+        db_user.is_superuser = True
+    elif db_user.is_superuser and role_update.role != "admin":
+        db_user.is_superuser = False
+
+    # 활성 상태 변경 (선택적)
+    if role_update.is_active is not None:
+        db_user.is_active = role_update.is_active
+
+    db.commit()
+    db.refresh(db_user)
     return db_user
 
 

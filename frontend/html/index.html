@@ -10,21 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body>
-  <!-- 헤더 -->
-  <header class="header">
-    <div class="header-inner">
-      <a href="index.html" class="logo">PyMonitor</a>
-      <nav class="nav">
-        <a href="index.html" class="nav-link active">대시보드</a>
-        <a href="project.html" class="nav-link">프로젝트 등록</a>
-        <a href="tools.html" class="nav-link">도구</a>
-      </nav>
-      <div class="user-actions">
-        <span class="user-name" id="user-name"></span>
-        <button class="btn btn-secondary btn-sm" id="logout-btn">로그아웃</button>
-      </div>
-    </div>
-  </header>
+  <!-- 헤더 (공통 컴포넌트) -->
+  <header id="app-header" class="header"></header>
 
   <!-- 메인 컨텐츠 -->
   <main class="main-content">
@@ -356,6 +343,18 @@
               </div>
             </div>
 
+            <!-- 공개 설정 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">공개 설정</h5>
+
+            <div class="form-group">
+              <label class="form-label form-checkbox">
+                <input type="checkbox" id="detail-is-public">
+                <span>상태 페이지에 공개</span>
+              </label>
+              <span class="form-hint">활성화하면 인증 없이 접근 가능한 공개 상태 페이지에 이 프로젝트가 표시됩니다</span>
+            </div>
+
             <!-- 알림 설정 -->
             <div class="form-section-divider"></div>
             <h5 class="form-subsection-title">알림 설정</h5>
@@ -402,6 +401,7 @@
   <!-- JavaScript - Components -->
   <script src="/frontend/js/components/toast.js"></script>
   <script src="/frontend/js/components/modal.js"></script>
+  <script src="/frontend/js/components/header.js"></script>
   <script src="/frontend/js/components/scheduler.js"></script>
   <script src="/frontend/js/components/chart.js"></script>
   <script src="/frontend/js/components/theme.js"></script>
