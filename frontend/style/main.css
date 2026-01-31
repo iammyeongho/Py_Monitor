@@ -25,6 +25,8 @@
 @import url('./pages/_auth.css');
 @import url('./pages/_dashboard.css');
 @import url('./pages/_tools.css');
+@import url('./pages/_profile.css');
+@import url('./pages/_status.css');
 
 /* Utilities */
 @import url('./utilities/_utilities.css');

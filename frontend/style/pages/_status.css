@@ -1,0 +1,472 @@
+/* ========================================
+   Status Page Styles
+   ======================================== */
+
+/* 상태 페이지 전용 헤더 (로그인 불필요) */
+.status-header {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.status-header-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.status-header-title a {
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.status-header-subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* 전체 상태 배너 */
+.status-banner {
+    padding: var(--spacing-xl) var(--spacing-lg);
+    text-align: center;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.status-banner.operational {
+    background-color: var(--success-bg);
+    border: 1px solid var(--success);
+}
+
+.status-banner.degraded {
+    background-color: var(--warning-bg);
+    border: 1px solid var(--warning);
+}
+
+.status-banner.major_outage {
+    background-color: var(--error-bg);
+    border: 1px solid var(--error);
+}
+
+.status-banner-icon {
+    font-size: 28px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.status-banner-text {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+}
+
+.status-banner.operational .status-banner-text {
+    color: var(--success);
+}
+
+.status-banner.degraded .status-banner-text {
+    color: var(--warning);
+}
+
+.status-banner.major_outage .status-banner-text {
+    color: var(--error);
+}
+
+.status-banner-time {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-xs);
+}
+
+/* 프로젝트 목록 */
+.status-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.status-item {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: box-shadow var(--transition-fast);
+    cursor: pointer;
+}
+
+.status-item:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.status-item-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex: 1;
+    min-width: 0;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-indicator.up {
+    background-color: var(--success);
+    box-shadow: 0 0 0 3px var(--success-bg);
+}
+
+.status-indicator.down {
+    background-color: var(--error);
+    box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+.status-indicator.degraded {
+    background-color: var(--warning);
+    box-shadow: 0 0 0 3px var(--warning-bg);
+}
+
+.status-item-info {
+    min-width: 0;
+}
+
+.status-item-title {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-item-url {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-item-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    flex-shrink: 0;
+}
+
+.status-item-uptime {
+    text-align: right;
+}
+
+.status-item-uptime-value {
+    font-size: var(--font-size-md);
+    font-weight: 700;
+}
+
+.status-item-uptime-value.good { color: var(--success); }
+.status-item-uptime-value.warn { color: var(--warning); }
+.status-item-uptime-value.bad { color: var(--error); }
+
+.status-item-uptime-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+.status-item-response {
+    text-align: right;
+    min-width: 60px;
+}
+
+.status-item-response-value {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.status-item-response-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+.status-text-badge {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+
+.status-text-badge.up {
+    background-color: var(--success-bg);
+    color: var(--success);
+}
+
+.status-text-badge.down {
+    background-color: var(--error-bg);
+    color: var(--error);
+}
+
+/* ========================================
+   상세 페이지 (모달 대신 인라인 확장)
+   ======================================== */
+
+.status-detail {
+    margin-top: var(--spacing-xl);
+}
+
+.status-detail-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.status-detail-back {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.status-detail-back:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.status-detail-title {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* 통계 카드 그리드 */
+.status-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.status-stat-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    text-align: center;
+}
+
+.status-stat-value {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+}
+
+.status-stat-value.good { color: var(--success); }
+.status-stat-value.warn { color: var(--warning); }
+.status-stat-value.bad { color: var(--error); }
+
+.status-stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-xs);
+}
+
+/* Uptime 바 차트 (90일) */
+.uptime-chart {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.uptime-chart-title {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.uptime-bars {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 40px;
+}
+
+.uptime-bar {
+    flex: 1;
+    min-width: 2px;
+    border-radius: 1px;
+    transition: opacity var(--transition-fast);
+    position: relative;
+}
+
+.uptime-bar:hover {
+    opacity: 0.8;
+}
+
+.uptime-bar.good { background-color: var(--success); }
+.uptime-bar.warn { background-color: var(--warning); }
+.uptime-bar.bad { background-color: var(--error); }
+.uptime-bar.empty { background-color: var(--gray-200); }
+
+.uptime-bar-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--text-primary);
+    color: var(--bg-primary);
+    font-size: var(--font-size-xs);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.uptime-bar:hover .uptime-bar-tooltip {
+    display: block;
+}
+
+.uptime-chart-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+/* 최근 인시던트 */
+.incidents-section {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+}
+
+.incidents-title {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.incidents-empty {
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: var(--font-size-sm);
+    padding: var(--spacing-xl) 0;
+}
+
+.incident-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.incident-item:last-child {
+    border-bottom: none;
+}
+
+.incident-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--error);
+    flex-shrink: 0;
+    margin-top: 6px;
+}
+
+.incident-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.incident-time {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+.incident-message {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* 상태 페이지 푸터 */
+.status-footer {
+    text-align: center;
+    padding: var(--spacing-xl) 0;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+.status-footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.status-footer a:hover {
+    text-decoration: underline;
+}
+
+/* 빈 상태 */
+.status-empty {
+    text-align: center;
+    padding: var(--spacing-2xl) 0;
+    color: var(--text-tertiary);
+}
+
+.status-empty-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-md);
+    opacity: 0.3;
+}
+
+.status-empty-text {
+    font-size: var(--font-size-md);
+}
+
+/* 로딩 */
+.status-loading {
+    text-align: center;
+    padding: var(--spacing-2xl) 0;
+    color: var(--text-tertiary);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .status-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .status-item-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .status-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .status-detail-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

@@ -31,6 +31,7 @@ class ProjectBase(BaseModel):
     expiry_interval: Optional[int] = Field(None, ge=1)
     time_limit: Optional[int] = Field(None, ge=1)
     time_limit_interval: Optional[int] = Field(None, ge=1)
+    is_public: Optional[bool] = None
     category: Optional[str] = Field(None, max_length=50)
     tags: Optional[str] = Field(None, max_length=500)
 

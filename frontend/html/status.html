@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>시스템 상태 | PyMonitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/frontend/style/main.css">
+</head>
+<body>
+  <!-- 상태 페이지 전용 헤더 (로그인 불필요) -->
+  <header class="status-header">
+    <div>
+      <div class="status-header-title"><a href="/frontend/html/status.html">PyMonitor</a></div>
+      <div class="status-header-subtitle">시스템 상태 페이지</div>
+    </div>
+  </header>
+
+  <!-- 메인 컨텐츠 -->
+  <main class="main-content">
+    <div class="container">
+      <div id="status-content">
+        <div class="status-loading">상태 정보를 불러오는 중...</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="status-footer">
+    <p>Powered by <a href="/">PyMonitor</a></p>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="/frontend/js/components/theme.js"></script>
+  <script src="/frontend/js/pages/status.js"></script>
+</body>
+</html>

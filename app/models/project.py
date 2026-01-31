@@ -71,6 +71,7 @@ class Project(Base):
     expiry_interval = Column(Integer, default=7)  # 만료일 알림 주기 (일)
     time_limit = Column(Integer, default=5)  # 응답 시간 제한 (초)
     time_limit_interval = Column(Integer, default=15)  # 제한 초과 시 알림 주기 (분)
+    is_public = Column(Boolean, default=False)  # 공개 상태 페이지 노출 여부
     category = Column(String(50), nullable=True)  # 프로젝트 카테고리
     tags = Column(String(500), nullable=True)  # 태그 (쉼표 구분)
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())  # 생성 시간
