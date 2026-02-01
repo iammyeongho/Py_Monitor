@@ -56,7 +56,8 @@ def _make_badge_svg(label: str, value: str, color: str) -> str:
     <rect x="{label_width}" width="{value_width}" height="20" fill="{color}"/>
     <rect width="{total_width}" height="20" fill="url(#s)"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif"
+     text-rendering="geometricPrecision" font-size="11">
     <text x="{label_width / 2}" y="14" fill="#010101" fill-opacity=".3">{label}</text>
     <text x="{label_width / 2}" y="13">{label}</text>
     <text x="{label_width + value_width / 2}" y="14" fill="#010101" fill-opacity=".3">{value}</text>

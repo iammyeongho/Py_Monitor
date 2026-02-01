@@ -12,7 +12,6 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_db, get_non_viewer_user

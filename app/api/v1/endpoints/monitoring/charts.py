@@ -18,7 +18,7 @@ from app.schemas.monitoring import (
     ResponseTimeChartData,
 )
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 
 
 class DashboardStats(BaseModel):
@@ -33,6 +33,7 @@ class DashboardStats(BaseModel):
     unresolved_alerts: int
     ssl_expiring_soon: int
     domain_expiring_soon: int
+
 
 router = APIRouter()
 
