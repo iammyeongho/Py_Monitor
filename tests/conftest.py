@@ -14,9 +14,14 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
 from app.core.security import get_password_hash, create_access_token
-from app.db.base import Base
+from app.db.base_class import Base
 from app.db.session import get_db
+# 모든 모델 import하여 Base.metadata에 테이블 등록
 from app.models.user import User
+from app.models.project import Project  # noqa: F401
+from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSetting  # noqa: F401
+from app.models.notification import Notification  # noqa: F401
+from app.models.ssl_domain import SSLDomainStatus  # noqa: F401
 from main import app
 
 # 테스트용 데이터베이스 URL (PostgreSQL py_monitor 스키마 사용)
@@ -74,6 +79,7 @@ def test_user(db) -> User:
         full_name="Test User",
         is_active=True,
         is_superuser=False,
+        role="user",
     )
     db.add(user)
     db.commit()
@@ -94,6 +100,7 @@ def test_superuser(db) -> User:
         full_name="Admin User",
         is_active=True,
         is_superuser=True,
+        role="admin",
     )
     db.add(user)
     db.commit()

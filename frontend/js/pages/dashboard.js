@@ -6,6 +6,8 @@ const dashboard = {
     // 상태
     currentProjectId: null,
     projects: [],
+    refreshInterval: null,
+    refreshIntervalMs: 60000, // 기본 1분 자동 새로고침
 
     /**
      * 초기화
@@ -17,6 +19,42 @@ const dashboard = {
         scheduler.init();
         chartManager.init();
         this.setupEventListeners();
+        this.startAutoRefresh();
+    },
+
+    /**
+     * 자동 새로고침 시작
+     */
+    startAutoRefresh() {
+        // 기존 인터벌 정리
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+
+        // 모니터링 상태만 주기적으로 새로고침 (전체 페이지 리로드 없이)
+        this.refreshInterval = setInterval(() => {
+            if (!document.hidden) {
+                this.loadMonitoringStatus();
+            }
+        }, this.refreshIntervalMs);
+
+        // 페이지 visibility 변경 시 처리
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // 탭이 다시 활성화되면 즉시 새로고침
+                this.loadMonitoringStatus();
+            }
+        });
+    },
+
+    /**
+     * 자동 새로고침 중지
+     */
+    stopAutoRefresh() {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
     },
 
     /**

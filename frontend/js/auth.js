@@ -1,5 +1,53 @@
 // 인증 관련 함수들
 const auth = {
+    // 401 에러 처리 중 플래그 (중복 로그아웃 방지)
+    _isHandling401: false,
+
+    // 401 에러 핸들러
+    handle401() {
+        if (this._isHandling401) return;
+        this._isHandling401 = true;
+
+        // 현재 페이지가 로그인 페이지가 아닐 때만 처리
+        if (!window.location.pathname.includes('login.html')) {
+            console.warn('세션이 만료되었습니다. 로그인 페이지로 이동합니다.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/frontend/html/login.html?expired=1';
+        }
+    },
+
+    // 인증된 API 요청 (401 자동 처리)
+    async apiRequest(url, options = {}) {
+        const token = this.getToken();
+        if (!token) {
+            this.handle401();
+            throw new Error('No token');
+        }
+
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            ...options.headers,
+        };
+
+        try {
+            const response = await fetch(url, { ...options, headers });
+
+            if (response.status === 401) {
+                this.handle401();
+                throw new Error('Unauthorized');
+            }
+
+            return response;
+        } catch (error) {
+            if (error.message === 'Unauthorized') {
+                throw error;
+            }
+            throw error;
+        }
+    },
+
     // 로그인 함수
     async login(email, password) {
         try {

@@ -24,11 +24,19 @@
 
 | # | 기능 | 상태 | 비고 |
 |---|------|------|------|
-| 3.1 | 다중 사용자 권한 | 대기 | 팀원 초대, 역할 기반 |
-| 3.2 | API Rate Limiting | 대기 | 요청 제한 |
-| 3.3 | Redis 캐싱 | 대기 | 응답 속도 개선 |
-| 3.4 | 공개 상태 페이지 | 대기 | 외부 공유용 |
-| 3.5 | Uptime 배지 | 대기 | README용 상태 배지 |
+| 3.1 | 다중 사용자 권한 | 완료 | admin/manager/user/viewer 역할 기반 |
+| 3.2 | API Rate Limiting | 완료 | Redis + InMemory 폴백 |
+| 3.3 | Redis 캐싱 | 완료 | 자동 폴백 지원 |
+| 3.4 | 공개 상태 페이지 | 완료 | /status/{project_id} |
+| 3.5 | Uptime 배지 | 완료 | /badge/{project_id}.svg |
+
+## 4순위 - 품질 개선
+
+| # | 기능 | 상태 | 비고 |
+|---|------|------|------|
+| 4.1 | 테스트 인프라 정비 | 완료 | conftest.py, fixture 수정 |
+| 4.2 | 401 자동 로그아웃 | 완료 | 세션 만료 시 자동 처리 |
+| 4.3 | 대시보드 자동 새로고침 | 완료 | 1분 주기 상태 갱신 |
 
 ---
 
@@ -100,3 +108,25 @@
   - ConnectionManager: 연결 관리, 프로젝트 구독
   - 모니터링 결과 실시간 푸시
   - 스케줄러와 연동
+
+### 2026-02-03
+
+- 3순위 고급 기능 구현 완료
+  - 3.1 다중 사용자 권한: admin/manager/user/viewer 역할 시스템
+  - 3.2 API Rate Limiting: Redis 기반 (InMemory 폴백)
+  - 3.3 Redis 캐싱: 자동 폴백 지원
+  - 3.4 공개 상태 페이지: `/status/{project_id}` 엔드포인트
+  - 3.5 Uptime 배지: `/badge/{project_id}.svg` SVG 배지
+- 4순위 품질 개선 구현 완료
+  - 테스트 인프라 정비
+    - conftest.py: Base 클래스 import 수정 (base.py -> base_class.py)
+    - conftest.py: 모든 모델 import 추가 (테이블 등록)
+    - conftest.py: test_user/test_superuser에 role 필드 추가
+    - test_projects.py: pytest fixture 패턴으로 완전 재작성
+  - 프론트엔드 개선
+    - auth.js: 401 자동 로그아웃 핸들러 추가
+    - auth.js: apiRequest() 메서드 추가 (인증 API 호출 래퍼)
+    - dashboard.js: 자동 새로고침 기능 추가 (1분 주기)
+    - dashboard.js: visibilitychange 이벤트 처리
+- 코드 품질 개선
+  - flake8 린트 오류 수정 (badge.py, charts.py, projects.py)
