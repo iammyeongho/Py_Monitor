@@ -37,6 +37,7 @@
 | 4.1 | 테스트 인프라 정비 | 완료 | conftest.py, fixture 수정 |
 | 4.2 | 401 자동 로그아웃 | 완료 | 세션 만료 시 자동 처리 |
 | 4.3 | 대시보드 자동 새로고침 | 완료 | 1분 주기 상태 갱신 |
+| 4.4 | Docker 설정 개선 | 완료 | 타임존, 로케일, 보안 설정 |
 
 ---
 
@@ -130,3 +131,9 @@
     - dashboard.js: visibilitychange 이벤트 처리
 - 코드 품질 개선
   - flake8 린트 오류 수정 (badge.py, charts.py, projects.py)
+- Docker 설정 개선
+  - Dockerfile: 타임존(Asia/Seoul), 로케일(ko_KR.UTF-8), 비root 사용자 설정
+  - Dockerfile: curl 설치 (헬스체크), 상세 주석 추가
+  - docker-compose.yml: 컨테이너 이름 고정, 볼륨 이름 명시, 상세 주석
+  - .dockerignore: 빌드 제외 파일 정의 (빌드 속도/보안 향상)
+  - nginx.conf: 리버스 프록시, 정적 파일 서빙, WebSocket 지원
