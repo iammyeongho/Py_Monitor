@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSetting
 from app.models.project import Project
+from app.services.cleanup_service import CleanupService
 from app.services.monitoring import MonitoringService
 from app.services.notification_service import NotificationService
 from app.services.playwright_monitor import PlaywrightMonitorService
@@ -59,6 +60,8 @@ class MonitoringScheduler:
         self.last_slow_alert: Dict[int, datetime] = {}  # 프로젝트별 마지막 느린 응답 알림 시간
         self.last_ssl_check: Dict[int, datetime] = {}  # 프로젝트별 마지막 SSL 체크 시간
         self.ssl_check_task: Optional[asyncio.Task] = None  # SSL/도메인 만료 체크 태스크
+        self.cleanup_task: Optional[asyncio.Task] = None  # 로그 정리 태스크
+        self.cleanup_service = CleanupService(db)
         self.is_running = False
         self._lock = asyncio.Lock()
 
@@ -86,6 +89,9 @@ class MonitoringScheduler:
             # SSL/도메인 만료 체크 태스크 시작 (매일 1회)
             self.ssl_check_task = asyncio.create_task(self._ssl_expiry_check_loop())
 
+            # 로그 자동 정리 태스크 시작 (매일 1회, 새벽 3시)
+            self.cleanup_task = asyncio.create_task(self._cleanup_loop())
+
             logger.info(f"Monitoring scheduler started with {len(projects)} projects")
 
     async def stop(self):
@@ -105,6 +111,11 @@ class MonitoringScheduler:
             if self.ssl_check_task:
                 self.ssl_check_task.cancel()
                 self.ssl_check_task = None
+
+            # 로그 정리 태스크 중지
+            if self.cleanup_task:
+                self.cleanup_task.cancel()
+                self.cleanup_task = None
 
             # Playwright 서비스 정리
             if self.playwright_service:
@@ -598,6 +609,46 @@ class MonitoringScheduler:
             logger.error(f"Manual check failed for project {project_id}: {e}")
             self.db.rollback()
             return None
+
+    async def _cleanup_loop(self):
+        """로그 자동 정리 루프 (매일 새벽 3시 실행)
+
+        보관 기간:
+        - 모니터링 로그: 30일
+        - 알림 기록: 90일
+        - 이메일 로그: 30일
+        """
+        while self.is_running:
+            try:
+                # 다음 새벽 3시까지 대기 시간 계산
+                now = datetime.now()
+                next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
+                if now >= next_run:
+                    # 이미 3시가 지났으면 내일 3시로
+                    from datetime import timedelta
+                    next_run = next_run + timedelta(days=1)
+
+                wait_seconds = (next_run - now).total_seconds()
+                logger.info(f"Next cleanup scheduled at {next_run} (in {wait_seconds/3600:.1f} hours)")
+                await asyncio.sleep(wait_seconds)
+
+                # 정리 실행
+                logger.info("Starting scheduled log cleanup...")
+                result = self.cleanup_service.cleanup_all()
+                logger.info(
+                    f"Cleanup completed: "
+                    f"logs={result['monitoring_logs_deleted']}, "
+                    f"alerts={result['alerts_deleted']}, "
+                    f"emails={result['email_logs_deleted']}"
+                )
+
+            except asyncio.CancelledError:
+                logger.info("Cleanup task cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Error in cleanup loop: {e}")
+                # 오류 시 1시간 후 재시도
+                await asyncio.sleep(3600)
 
     def get_status(self) -> dict:
         """스케줄러 상태 반환"""
