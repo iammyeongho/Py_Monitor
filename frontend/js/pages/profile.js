@@ -53,7 +53,10 @@ const profilePage = {
         document.getElementById('profile-name').value = this.user.full_name || '';
         document.getElementById('profile-phone').value = this.user.phone || '';
 
-        // 알림 설정
+        // 환경 설정
+        document.getElementById('theme-setting').value = this.user.theme || 'light';
+        document.getElementById('language-setting').value = this.user.language || 'ko';
+        document.getElementById('timezone-setting').value = this.user.timezone || 'Asia/Seoul';
         document.getElementById('email-notifications').checked = this.user.email_notifications !== false;
 
         // 계정 정보
@@ -65,6 +68,18 @@ const profilePage = {
             statusEl.innerHTML = '<span class="badge badge-success">활성</span>';
         } else {
             statusEl.innerHTML = '<span class="badge badge-error">비활성</span>';
+        }
+
+        // 역할 표시
+        const roleEl = document.getElementById('profile-role');
+        if (roleEl) {
+            const roleMap = {
+                admin: '관리자',
+                manager: '매니저',
+                user: '사용자',
+                viewer: '뷰어'
+            };
+            roleEl.textContent = roleMap[this.user.role] || this.user.role;
         }
     },
 
@@ -84,10 +99,10 @@ const profilePage = {
             passwordForm.addEventListener('submit', (e) => this.handlePasswordSubmit(e));
         }
 
-        // 알림 설정 저장
-        const notificationForm = document.getElementById('notification-form');
-        if (notificationForm) {
-            notificationForm.addEventListener('submit', (e) => this.handleNotificationSubmit(e));
+        // 환경 설정 저장
+        const settingsForm = document.getElementById('settings-form');
+        if (settingsForm) {
+            settingsForm.addEventListener('submit', (e) => this.handleSettingsSubmit(e));
         }
     },
 
@@ -191,36 +206,56 @@ const profilePage = {
     },
 
     /**
-     * 알림 설정 저장
+     * 환경 설정 저장
      */
-    async handleNotificationSubmit(e) {
+    async handleSettingsSubmit(e) {
         e.preventDefault();
 
         const submitBtn = e.target.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.textContent = '저장 중...';
 
+        const theme = document.getElementById('theme-setting').value;
+        const language = document.getElementById('language-setting').value;
+        const timezone = document.getElementById('timezone-setting').value;
+        const emailNotifications = document.getElementById('email-notifications').checked;
+
         try {
             const response = await fetch('/api/v1/auth/me/settings', {
                 method: 'PUT',
                 headers: auth.getAuthHeaders(),
                 body: JSON.stringify({
-                    email_notifications: document.getElementById('email-notifications').checked,
+                    theme: theme,
+                    language: language,
+                    timezone: timezone,
+                    email_notifications: emailNotifications,
                 })
             });
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.detail || '알림 설정 저장에 실패했습니다');
+                throw new Error(error.detail || '설정 저장에 실패했습니다');
             }
 
-            showToast('알림 설정이 저장되었습니다.', 'success');
+            // 테마 즉시 적용
+            if (window.themeManager) {
+                window.themeManager.setTheme(theme);
+            }
+
+            // 로컬 사용자 데이터 업데이트
+            this.user.theme = theme;
+            this.user.language = language;
+            this.user.timezone = timezone;
+            this.user.email_notifications = emailNotifications;
+            localStorage.setItem('user', JSON.stringify(this.user));
+
+            showToast('설정이 저장되었습니다.', 'success');
         } catch (error) {
-            console.error('알림 설정 저장 오류:', error);
+            console.error('설정 저장 오류:', error);
             showToast(error.message, 'error');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = '알림 설정 저장';
+            submitBtn.textContent = '설정 저장';
         }
     }
 };

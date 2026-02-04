@@ -70,11 +70,37 @@
           </div>
         </div>
 
-        <!-- 알림 설정 섹션 -->
+        <!-- 환경 설정 섹션 -->
         <div class="form-card">
           <div class="form-section">
-            <h2 class="form-section-title">알림 설정</h2>
-            <form id="notification-form">
+            <h2 class="form-section-title">환경 설정</h2>
+            <form id="settings-form">
+              <div class="form-group">
+                <label class="form-label" for="theme-setting">테마</label>
+                <select class="form-input" id="theme-setting">
+                  <option value="light">라이트 모드</option>
+                  <option value="dark">다크 모드</option>
+                  <option value="system">시스템 설정 따르기</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="language-setting">언어</label>
+                <select class="form-input" id="language-setting">
+                  <option value="ko">한국어</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="timezone-setting">시간대</label>
+                <select class="form-input" id="timezone-setting">
+                  <option value="Asia/Seoul">Asia/Seoul (KST, UTC+9)</option>
+                  <option value="UTC">UTC</option>
+                  <option value="America/New_York">America/New_York (EST)</option>
+                  <option value="Europe/London">Europe/London (GMT)</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                  <option value="Asia/Shanghai">Asia/Shanghai (CST)</option>
+                </select>
+              </div>
               <div class="form-group">
                 <label class="form-label form-checkbox">
                   <input type="checkbox" id="email-notifications" checked>
@@ -83,7 +109,7 @@
                 <span class="form-hint">장애 발생, SSL 만료 등의 알림을 이메일로 받습니다</span>
               </div>
               <div class="form-actions">
-                <button type="submit" class="btn btn-primary">알림 설정 저장</button>
+                <button type="submit" class="btn btn-primary">설정 저장</button>
               </div>
             </form>
           </div>

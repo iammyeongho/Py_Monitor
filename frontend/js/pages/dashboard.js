@@ -88,6 +88,30 @@ const dashboard = {
         // 모달 외부 클릭
         modal.setupAllOutsideClick();
 
+        // 유지보수 모드 체크박스 변경 이벤트
+        const maintenanceModeCheckbox = document.getElementById('detail-maintenance-mode');
+        if (maintenanceModeCheckbox) {
+            maintenanceModeCheckbox.addEventListener('change', (e) => {
+                this.toggleMaintenanceFields(e.target.checked);
+            });
+        }
+
+        // 콘텐츠 변경 감지 체크박스 변경 이벤트
+        const contentChangeCheckbox = document.getElementById('detail-content-change-detection');
+        if (contentChangeCheckbox) {
+            contentChangeCheckbox.addEventListener('change', (e) => {
+                this.toggleContentChangeFields(e.target.checked);
+            });
+        }
+
+        // 키워드 모니터링 체크박스 변경 이벤트
+        const keywordMonitoringCheckbox = document.getElementById('detail-keyword-monitoring');
+        if (keywordMonitoringCheckbox) {
+            keywordMonitoringCheckbox.addEventListener('change', (e) => {
+                this.toggleKeywordFields(e.target.checked);
+            });
+        }
+
         // 상세 모달 탭
         modal.setupTabs('.modal-tab', '.modal-tab-content', (tabId) => {
             if (tabId === 'detail-history' && this.currentProjectId) {
@@ -171,7 +195,12 @@ const dashboard = {
      */
     createProjectCard(proj) {
         let statusClass, statusText;
-        if (proj.is_available === null || proj.is_available === undefined) {
+
+        // 유지보수 모드 확인
+        if (proj.maintenance_mode) {
+            statusClass = 'status-maintenance';
+            statusText = '유지보수';
+        } else if (proj.is_available === null || proj.is_available === undefined) {
             statusClass = 'status-pending';
             statusText = '대기중';
         } else if (proj.is_available === true) {
@@ -406,9 +435,30 @@ const dashboard = {
      * 상세 설정 로드
      */
     async loadDetailSettings(projectId) {
-        // 프로젝트 공개 설정 로드 (프로젝트 데이터에서)
+        // 프로젝트 공개 설정 및 유지보수 모드 로드 (프로젝트 데이터에서)
         const proj = this.projects.find(p => p.id === projectId);
         document.getElementById('detail-is-public').checked = proj?.is_public || false;
+
+        // 유지보수 모드 설정 로드
+        const maintenanceMode = proj?.maintenance_mode || false;
+        document.getElementById('detail-maintenance-mode').checked = maintenanceMode;
+        document.getElementById('detail-maintenance-message').value = proj?.maintenance_message || '';
+
+        // 예정 종료 시간 포맷 변환 (ISO → datetime-local)
+        if (proj?.maintenance_ends_at) {
+            const date = new Date(proj.maintenance_ends_at);
+            const localDateTime = date.toISOString().slice(0, 16);
+            document.getElementById('detail-maintenance-ends').value = localDateTime;
+        } else {
+            document.getElementById('detail-maintenance-ends').value = '';
+        }
+
+        // 유지보수 모드 관련 필드 표시/숨김
+        this.toggleMaintenanceFields(maintenanceMode);
+
+        // 커스텀 헤더 로드 (프로젝트 데이터에서)
+        const customHeadersText = this.parseCustomHeadersToText(proj?.custom_headers);
+        document.getElementById('detail-custom-headers').value = customHeadersText;
 
         try {
             const settings = await monitoring.getSettings(projectId);
@@ -421,6 +471,23 @@ const dashboard = {
             document.getElementById('detail-alert-enabled').checked = settings.is_alert_enabled !== false;
             document.getElementById('detail-alert-email').value = settings.alert_email || '';
             document.getElementById('detail-webhook-url').value = settings.webhook_url || '';
+
+            // 콘텐츠 변경 감지 설정
+            const contentChangeEnabled = settings.content_change_detection || false;
+            document.getElementById('detail-content-change-detection').checked = contentChangeEnabled;
+            document.getElementById('detail-content-selector').value = settings.content_selector || '';
+            this.toggleContentChangeFields(contentChangeEnabled);
+
+            // 키워드 모니터링 설정
+            const keywordEnabled = settings.keyword_monitoring || false;
+            document.getElementById('detail-keyword-monitoring').checked = keywordEnabled;
+            // 키워드는 JSON 배열을 줄바꿈 문자열로 변환
+            const keywords = settings.keywords ? JSON.parse(settings.keywords) : [];
+            document.getElementById('detail-keywords').value = keywords.join('\n');
+            // 알림 모드 설정
+            const alertOnFound = settings.keyword_alert_on_found !== false;
+            document.querySelector(`input[name="keyword-alert-mode"][value="${alertOnFound ? 'found' : 'not_found'}"]`).checked = true;
+            this.toggleKeywordFields(keywordEnabled);
         } catch (error) {
             console.warn('모니터링 설정 로드 실패:', error);
             // 기본값 설정
@@ -433,7 +500,44 @@ const dashboard = {
             document.getElementById('detail-alert-enabled').checked = true;
             document.getElementById('detail-alert-email').value = '';
             document.getElementById('detail-webhook-url').value = '';
+            // 콘텐츠 변경 감지 기본값
+            document.getElementById('detail-content-change-detection').checked = false;
+            document.getElementById('detail-content-selector').value = '';
+            this.toggleContentChangeFields(false);
+            // 키워드 모니터링 기본값
+            document.getElementById('detail-keyword-monitoring').checked = false;
+            document.getElementById('detail-keywords').value = '';
+            document.querySelector('input[name="keyword-alert-mode"][value="found"]').checked = true;
+            this.toggleKeywordFields(false);
         }
+    },
+
+    /**
+     * 유지보수 모드 관련 필드 토글
+     */
+    toggleMaintenanceFields(show) {
+        const messageGroup = document.getElementById('maintenance-message-group');
+        const endsGroup = document.getElementById('maintenance-ends-group');
+        if (messageGroup) messageGroup.style.display = show ? 'block' : 'none';
+        if (endsGroup) endsGroup.style.display = show ? 'block' : 'none';
+    },
+
+    /**
+     * 콘텐츠 변경 감지 관련 필드 토글
+     */
+    toggleContentChangeFields(show) {
+        const selectorGroup = document.getElementById('content-selector-group');
+        if (selectorGroup) selectorGroup.style.display = show ? 'block' : 'none';
+    },
+
+    /**
+     * 키워드 모니터링 관련 필드 토글
+     */
+    toggleKeywordFields(show) {
+        const keywordsGroup = document.getElementById('keywords-group');
+        const alertModeGroup = document.getElementById('keyword-alert-mode-group');
+        if (keywordsGroup) keywordsGroup.style.display = show ? 'block' : 'none';
+        if (alertModeGroup) alertModeGroup.style.display = show ? 'block' : 'none';
     },
 
     /**
@@ -478,6 +582,22 @@ const dashboard = {
         const webhookUrl = document.getElementById('detail-webhook-url').value.trim();
         const isPublic = document.getElementById('detail-is-public').checked;
 
+        // 유지보수 모드 설정
+        const maintenanceMode = document.getElementById('detail-maintenance-mode').checked;
+        const maintenanceMessage = document.getElementById('detail-maintenance-message').value.trim();
+        const maintenanceEndsStr = document.getElementById('detail-maintenance-ends').value;
+        const maintenanceEnds = maintenanceEndsStr ? new Date(maintenanceEndsStr).toISOString() : null;
+
+        // 콘텐츠 변경 감지 설정
+        const contentChangeDetection = document.getElementById('detail-content-change-detection').checked;
+        const contentSelector = document.getElementById('detail-content-selector').value.trim();
+
+        // 키워드 모니터링 설정
+        const keywordMonitoring = document.getElementById('detail-keyword-monitoring').checked;
+        const keywordsText = document.getElementById('detail-keywords').value.trim();
+        const keywords = keywordsText ? keywordsText.split('\n').map(k => k.trim()).filter(k => k) : [];
+        const keywordAlertOnFound = document.querySelector('input[name="keyword-alert-mode"]:checked')?.value === 'found';
+
         const settings = {
             check_interval: parseInt(document.getElementById('detail-check-interval').value),
             timeout: parseInt(document.getElementById('detail-timeout').value),
@@ -487,22 +607,45 @@ const dashboard = {
             expiry_alert_days: parseInt(document.getElementById('detail-expiry-dday').value),
             is_alert_enabled: document.getElementById('detail-alert-enabled').checked,
             alert_email: alertEmail || null,
-            webhook_url: webhookUrl || null
+            webhook_url: webhookUrl || null,
+            // 콘텐츠 변경 감지
+            content_change_detection: contentChangeDetection,
+            content_selector: contentSelector || null,
+            // 키워드 모니터링
+            keyword_monitoring: keywordMonitoring,
+            keywords: keywords.length > 0 ? JSON.stringify(keywords) : null,
+            keyword_alert_on_found: keywordAlertOnFound
         };
+
+        // 커스텀 헤더 설정
+        const customHeadersText = document.getElementById('detail-custom-headers').value;
+        const customHeaders = this.parseTextToCustomHeaders(customHeadersText);
 
         try {
             // 모니터링 설정 저장
             await monitoring.updateSettings(this.currentProjectId, settings);
 
-            // 프로젝트 공개 설정 저장
+            // 프로젝트 설정 저장 (공개 설정, 커스텀 헤더)
             const proj = this.projects.find(p => p.id === this.currentProjectId);
-            if (proj && proj.is_public !== isPublic) {
+            const projectNeedsUpdate = proj && (
+                proj.is_public !== isPublic ||
+                proj.custom_headers !== customHeaders
+            );
+            if (projectNeedsUpdate) {
                 await project.updateProject(this.currentProjectId, {
                     title: proj.title,
                     url: proj.url,
                     is_public: isPublic,
+                    custom_headers: customHeaders,
                 });
             }
+
+            // 유지보수 모드 설정 저장
+            await this.updateMaintenanceMode(this.currentProjectId, {
+                maintenance_mode: maintenanceMode,
+                maintenance_message: maintenanceMessage || null,
+                maintenance_ends_at: maintenanceEnds
+            });
 
             showToast('설정이 저장되었습니다.', 'success');
             this.closeDetailModal();
@@ -511,6 +654,69 @@ const dashboard = {
             console.error('설정 저장 오류:', error);
             showToast('설정 저장에 실패했습니다.', 'error');
         }
+    },
+
+    /**
+     * 유지보수 모드 업데이트
+     */
+    async updateMaintenanceMode(projectId, maintenanceData) {
+        const response = await fetch(`/api/v1/projects/${projectId}/maintenance`, {
+            method: 'PUT',
+            headers: {
+                ...auth.getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(maintenanceData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '유지보수 모드 설정 실패');
+        }
+
+        return await response.json();
+    },
+
+    /**
+     * 커스텀 헤더 JSON을 텍스트로 변환
+     * @param {string|null} customHeadersJson - JSON 형식의 커스텀 헤더
+     * @returns {string} 줄바꿈으로 구분된 "헤더명: 값" 형식의 텍스트
+     */
+    parseCustomHeadersToText(customHeadersJson) {
+        if (!customHeadersJson) return '';
+        try {
+            const headers = JSON.parse(customHeadersJson);
+            return Object.entries(headers)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n');
+        } catch (e) {
+            console.warn('커스텀 헤더 파싱 실패:', e);
+            return '';
+        }
+    },
+
+    /**
+     * 텍스트를 커스텀 헤더 JSON으로 변환
+     * @param {string} text - 줄바꿈으로 구분된 "헤더명: 값" 형식의 텍스트
+     * @returns {string|null} JSON 형식의 커스텀 헤더 또는 빈 경우 null
+     */
+    parseTextToCustomHeaders(text) {
+        if (!text || !text.trim()) return null;
+        const headers = {};
+        const lines = text.split('\n');
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+            const colonIndex = trimmedLine.indexOf(':');
+            if (colonIndex > 0) {
+                const key = trimmedLine.substring(0, colonIndex).trim();
+                const value = trimmedLine.substring(colonIndex + 1).trim();
+                if (key && value) {
+                    headers[key] = value;
+                }
+            }
+        }
+        return Object.keys(headers).length > 0 ? JSON.stringify(headers) : null;
     },
 
     /**

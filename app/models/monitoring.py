@@ -221,6 +221,18 @@ class MonitoringSetting(Base):
     is_alert_enabled = Column(Boolean, default=True)  # 알림 활성화 여부
     alert_email = Column(String(255), nullable=True)  # 알림 이메일
     webhook_url = Column(String(500), nullable=True)  # 웹훅 URL
+
+    # 콘텐츠 변경 감지 설정
+    content_change_detection = Column(Boolean, default=False)  # 콘텐츠 변경 감지 활성화
+    content_hash = Column(String(64), nullable=True)  # 마지막 콘텐츠 해시 (SHA-256)
+    content_selector = Column(String(255), nullable=True)  # 감지할 CSS 셀렉터 (전체 페이지: null)
+    last_content_check_at = Column(DateTime, nullable=True)  # 마지막 콘텐츠 체크 시간
+
+    # 키워드 모니터링 설정
+    keyword_monitoring = Column(Boolean, default=False)  # 키워드 모니터링 활성화
+    keywords = Column(Text, nullable=True)  # 모니터링할 키워드 (JSON 배열)
+    keyword_alert_on_found = Column(Boolean, default=True)  # True: 키워드 발견 시 알림, False: 키워드 없을 때 알림
+
     created_at = Column(DateTime, default=datetime.utcnow)  # Laravel의 $timestamps
     updated_at = Column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

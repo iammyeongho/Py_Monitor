@@ -10,10 +10,12 @@
 """
 
 import asyncio
+import hashlib
 import json
 import logging
+import re
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -43,6 +45,7 @@ def _get_ws_functions():
         except ImportError:
             pass
     return _ws_notify_update, _ws_notify_alert
+
 
 logger = logging.getLogger(__name__)
 
@@ -219,6 +222,14 @@ class MonitoringScheduler:
                         response_time=http_status.response_time
                     )
 
+                # 7. 콘텐츠 변경 감지 및 키워드 모니터링
+                if is_available and setting and http_status.content:
+                    await self._handle_content_monitoring(
+                        project=project,
+                        setting=setting,
+                        content=http_status.content
+                    )
+
                 self.db.commit()
 
                 # 7. WebSocket으로 실시간 업데이트 전송
@@ -311,7 +322,10 @@ class MonitoringScheduler:
                 if playwright_result and playwright_result.error_message:
                     error_details.append(f"Playwright: {playwright_result.error_message}")
 
-                alert_message = f"서비스 연속 {failures}회 실패. " + "; ".join(error_details) if error_details else f"서비스 연속 {failures}회 실패"
+                if error_details:
+                    alert_message = f"서비스 연속 {failures}회 실패. " + "; ".join(error_details)
+                else:
+                    alert_message = f"서비스 연속 {failures}회 실패"
 
                 alert = MonitoringAlert(
                     project_id=project_id,
@@ -419,6 +433,142 @@ class MonitoringScheduler:
             )
         except Exception as e:
             logger.error(f"Failed to send slow response notification: {e}")
+
+    async def _handle_content_monitoring(
+        self,
+        project: Project,
+        setting: MonitoringSetting,
+        content: str
+    ):
+        """콘텐츠 변경 감지 및 키워드 모니터링 처리"""
+        # 1. 콘텐츠 변경 감지
+        if setting.content_change_detection:
+            await self._check_content_change(project, setting, content)
+
+        # 2. 키워드 모니터링
+        if setting.keyword_monitoring and setting.keywords:
+            await self._check_keywords(project, setting, content)
+
+    async def _check_content_change(
+        self,
+        project: Project,
+        setting: MonitoringSetting,
+        content: str
+    ):
+        """콘텐츠 변경 감지"""
+        project_id = project.id
+
+        # 특정 CSS 셀렉터가 지정된 경우 해당 부분만 추출 (간단한 구현)
+        # 실제로는 BeautifulSoup 등을 사용해야 하지만 여기서는 전체 콘텐츠 사용
+        target_content = content
+        if setting.content_selector:
+            # 간단한 정규식으로 특정 태그 내용 추출 시도
+            pattern = rf'<{setting.content_selector}[^>]*>(.*?)</{setting.content_selector}>'
+            matches = re.findall(pattern, content, re.DOTALL | re.IGNORECASE)
+            if matches:
+                target_content = ' '.join(matches)
+
+        # 콘텐츠 해시 계산 (공백 정규화)
+        normalized_content = ' '.join(target_content.split())
+        current_hash = hashlib.sha256(normalized_content.encode('utf-8')).hexdigest()
+
+        # 이전 해시와 비교
+        previous_hash = setting.content_hash
+
+        if previous_hash and previous_hash != current_hash:
+            # 콘텐츠 변경 감지됨
+            alert_message = "웹사이트 콘텐츠가 변경되었습니다."
+            if setting.content_selector:
+                alert_message += f" (감시 영역: {setting.content_selector})"
+
+            alert = MonitoringAlert(
+                project_id=project_id,
+                alert_type="content_change",
+                message=alert_message,
+            )
+            self.db.add(alert)
+
+            logger.info(f"Content change detected for project {project_id}")
+
+            # 알림 발송
+            try:
+                await self.notification_service.send_alert_notification(
+                    project_id=project_id,
+                    alert_type="content_change",
+                    message=alert_message,
+                    details={
+                        "이전 해시": previous_hash[:16] + "...",
+                        "현재 해시": current_hash[:16] + "...",
+                        "감시 영역": setting.content_selector or "전체 페이지",
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to send content change notification: {e}")
+
+        # 해시 업데이트
+        setting.content_hash = current_hash
+        setting.last_content_check_at = datetime.utcnow()
+
+    async def _check_keywords(
+        self,
+        project: Project,
+        setting: MonitoringSetting,
+        content: str
+    ):
+        """키워드 모니터링"""
+        project_id = project.id
+
+        try:
+            keywords: List[str] = json.loads(setting.keywords)
+        except (json.JSONDecodeError, TypeError):
+            # 쉼표 구분 문자열로 처리
+            keywords = [k.strip() for k in (setting.keywords or "").split(",") if k.strip()]
+
+        if not keywords:
+            return
+
+        # 키워드 검색
+        content_lower = content.lower()
+        found_keywords = [kw for kw in keywords if kw.lower() in content_lower]
+        missing_keywords = [kw for kw in keywords if kw.lower() not in content_lower]
+
+        # 알림 조건 확인
+        should_alert = False
+        alert_message = ""
+
+        if setting.keyword_alert_on_found and found_keywords:
+            # 키워드가 발견되면 알림
+            should_alert = True
+            alert_message = f"모니터링 키워드가 발견되었습니다: {', '.join(found_keywords)}"
+        elif not setting.keyword_alert_on_found and missing_keywords:
+            # 키워드가 없으면 알림
+            should_alert = True
+            alert_message = f"필수 키워드가 누락되었습니다: {', '.join(missing_keywords)}"
+
+        if should_alert:
+            alert = MonitoringAlert(
+                project_id=project_id,
+                alert_type="keyword_alert",
+                message=alert_message,
+            )
+            self.db.add(alert)
+
+            logger.info(f"Keyword alert for project {project_id}: {alert_message}")
+
+            # 알림 발송
+            try:
+                await self.notification_service.send_alert_notification(
+                    project_id=project_id,
+                    alert_type="keyword_alert",
+                    message=alert_message,
+                    details={
+                        "발견된 키워드": ', '.join(found_keywords) if found_keywords else "없음",
+                        "누락된 키워드": ', '.join(missing_keywords) if missing_keywords else "없음",
+                        "전체 키워드": ', '.join(keywords),
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Failed to send keyword alert notification: {e}")
 
     async def _send_websocket_update(self, project: Project, log: MonitoringLog):
         """WebSocket으로 모니터링 업데이트 전송"""

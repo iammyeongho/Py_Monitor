@@ -184,21 +184,41 @@ class MonitoringService:
 
     async def check_project_status(self, project_id: int) -> MonitoringStatus:
         """프로젝트 상태 확인"""
+        import json
+
         project = self.db.query(Project).filter(Project.id == project_id).first()
         if not project:
             raise ValueError(f"Project {project_id} not found")
 
+        # 커스텀 헤더 파싱
+        headers = {}
+        if project.custom_headers:
+            try:
+                headers = json.loads(project.custom_headers)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid custom headers JSON for project {project_id}")
+
         try:
             async with aiohttp.ClientSession() as session:
                 start_time = datetime.now()
-                async with session.get(project.url, timeout=30) as response:
+                async with session.get(
+                    project.url, timeout=30, headers=headers
+                ) as response:
                     response_time = (datetime.now() - start_time).total_seconds()
+
+                    # 콘텐츠 변경 감지를 위해 본문 읽기
+                    content = None
+                    try:
+                        content = await response.text()
+                    except Exception:
+                        pass  # 콘텐츠 읽기 실패는 무시
 
                     return MonitoringStatus(
                         is_available=True,
                         response_time=response_time,
                         status_code=response.status,
                         error_message=None,
+                        content=content,
                     )
         except Exception as e:
             logger.error(f"Error checking project {project_id}: {str(e)}")
@@ -207,6 +227,7 @@ class MonitoringService:
                 response_time=None,
                 status_code=None,
                 error_message=str(e),
+                content=None,
             )
 
     async def check_ssl_status(self, project: Project) -> dict:

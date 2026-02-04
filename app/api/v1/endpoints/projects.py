@@ -9,6 +9,7 @@
 # 3. HTTPException = Laravel의 abort()와 유사
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -18,6 +19,8 @@ from app.core.deps import get_db, get_non_viewer_user
 from app.core.security import get_current_user
 from app.models.project import Project
 from app.schemas.project import (
+    MaintenanceModeResponse,
+    MaintenanceModeUpdate,
     ProjectCreate,
     ProjectResponse,
     ProjectUpdate,
@@ -215,6 +218,77 @@ def delete_project(
     db_project.is_active = False
     db.commit()
     db.refresh(db_project)
+    return db_project
+
+
+# =====================
+# 유지보수 모드 엔드포인트
+# =====================
+
+
+@router.put("/{project_id}/maintenance", response_model=MaintenanceModeResponse)
+def update_maintenance_mode(
+    project_id: int,
+    maintenance: MaintenanceModeUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_non_viewer_user),
+):
+    """프로젝트의 유지보수 모드를 설정/해제합니다.
+
+    유지보수 모드가 활성화되면 해당 프로젝트의 모니터링이 일시 중지됩니다.
+    """
+    db_project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+        )
+        .first()
+    )
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
+
+    # 유지보수 모드 활성화
+    if maintenance.maintenance_mode:
+        db_project.maintenance_mode = True
+        db_project.maintenance_message = maintenance.maintenance_message
+        db_project.maintenance_started_at = datetime.utcnow()
+        db_project.maintenance_ends_at = maintenance.maintenance_ends_at
+    else:
+        # 유지보수 모드 비활성화
+        db_project.maintenance_mode = False
+        db_project.maintenance_message = None
+        db_project.maintenance_started_at = None
+        db_project.maintenance_ends_at = None
+
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+
+@router.get("/{project_id}/maintenance", response_model=MaintenanceModeResponse)
+def get_maintenance_mode(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """프로젝트의 유지보수 모드 상태를 조회합니다."""
+    db_project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.user_id == current_user.id,
+            Project.is_active.is_(True),
+        )
+        .first()
+    )
+    if db_project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
     return db_project
 
 

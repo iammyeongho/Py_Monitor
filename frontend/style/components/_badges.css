@@ -61,6 +61,11 @@
     color: var(--text-tertiary);
 }
 
+.project-status.status-maintenance {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+}
+
 /* Generic Badge */
 .badge {
     display: inline-flex;

@@ -74,6 +74,16 @@ class Project(Base):
     is_public = Column(Boolean, default=False)  # 공개 상태 페이지 노출 여부
     category = Column(String(50), nullable=True)  # 프로젝트 카테고리
     tags = Column(String(500), nullable=True)  # 태그 (쉼표 구분)
+
+    # 유지보수 모드 설정
+    maintenance_mode = Column(Boolean, default=False)  # 유지보수 모드 활성화
+    maintenance_message = Column(String(500), nullable=True)  # 유지보수 안내 메시지
+    maintenance_started_at = Column(DateTime, nullable=True)  # 유지보수 시작 시간
+    maintenance_ends_at = Column(DateTime, nullable=True)  # 유지보수 종료 예정 시간
+
+    # 커스텀 헤더 설정 (JSON 형식: {"Header-Name": "value", ...})
+    custom_headers = Column(String(2000), nullable=True)  # 모니터링 요청 시 추가할 HTTP 헤더
+
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())  # 생성 시간
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())  # 수정 시간
     deleted_at = Column(DateTime, nullable=True)  # 삭제 시간
@@ -114,8 +124,13 @@ class Project(Base):
 
     @property
     def is_monitoring_enabled(self) -> bool:
-        """모니터링 활성화 여부 (활성 + 상태 정상 + 미삭제)"""
-        return self.is_active and self.status and not self.is_deleted
+        """모니터링 활성화 여부 (활성 + 상태 정상 + 미삭제 + 유지보수 모드 아님)"""
+        return self.is_active and self.status and not self.is_deleted and not self.maintenance_mode
+
+    @property
+    def is_in_maintenance(self) -> bool:
+        """유지보수 모드 여부"""
+        return self.maintenance_mode is True
 
     @property
     def domain(self) -> str:

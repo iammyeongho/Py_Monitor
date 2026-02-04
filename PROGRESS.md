@@ -39,6 +39,26 @@
 | 4.3 | 대시보드 자동 새로고침 | 완료 | 1분 주기 상태 갱신 |
 | 4.4 | Docker 설정 개선 | 완료 | 타임존, 로케일, 보안 설정 |
 
+## 5순위 - 확장 기능 (신규)
+
+| # | 기능 | 상태 | 비고 |
+|---|------|------|------|
+| 5.1 | 유지보수 모드 | 완료 | 점검 시 모니터링 일시 중지 |
+| 5.2 | 콘텐츠 변경 감지 | 완료 | 페이지 hash 비교 알림 (SHA-256) |
+| 5.3 | 키워드 모니터링 | 완료 | 특정 문구 존재/부재 여부 체크 |
+| 5.4 | 커스텀 헤더 지원 | 완료 | 인증 헤더, API 키 등 |
+| 5.5 | 사용자 프로필 페이지 | 완료 | 설정, 비밀번호 변경 |
+
+## 6순위 - 고급 모니터링 (신규)
+
+| # | 기능 | 상태 | 비고 |
+|---|------|------|------|
+| 6.1 | API 엔드포인트 체크 | 대기 | JSON 응답 검증 |
+| 6.2 | Uptime SLA 리포트 | 대기 | 월간/주간 가용률 통계 |
+| 6.3 | TCP/UDP 포트 체크 | 대기 | 서비스 포트 모니터링 |
+| 6.4 | 다중 리전 체크 | 대기 | 여러 위치에서 체크 |
+| 6.5 | 이상 탐지 | 대기 | 응답시간 급변 감지 |
+
 ---
 
 ## 작업 로그
@@ -137,3 +157,37 @@
   - docker-compose.yml: 컨테이너 이름 고정, 볼륨 이름 명시, 상세 주석
   - .dockerignore: 빌드 제외 파일 정의 (빌드 속도/보안 향상)
   - nginx.conf: 리버스 프록시, 정적 파일 서빙, WebSocket 지원
+
+### 2026-02-04
+
+- 5순위/6순위 확장 기능 계획 수립
+- 5.1 유지보수 모드 구현 완료
+  - Project 모델: maintenance_mode, maintenance_message, maintenance_started_at, maintenance_ends_at 필드 추가
+  - is_monitoring_enabled 프로퍼티: 유지보수 모드 시 모니터링 비활성화
+  - API: PUT/GET `/projects/{id}/maintenance` 엔드포인트 추가
+  - 프론트엔드: 설정 탭에 유지보수 모드 UI 추가
+  - CSS: status-maintenance 스타일 추가
+  - DB 마이그레이션 적용
+- 5.5 사용자 프로필 페이지 개선 완료
+  - profile.html: 환경 설정 섹션 추가 (테마, 언어, 시간대)
+  - profile.js: handleSettingsSubmit() 메서드 추가
+  - 테마 변경 시 즉시 적용
+  - 기존 알림 설정 폼을 환경 설정으로 통합
+- 5.2 콘텐츠 변경 감지 구현 완료
+  - MonitoringSetting 모델: content_change_detection, content_hash, content_selector, last_content_check_at 필드 추가
+  - MonitoringService: check_project_status에서 페이지 콘텐츠 캡처
+  - scheduler.py: _check_content_change 메서드 추가 (SHA-256 해시 비교)
+  - 특정 CSS 태그 내용만 감시 가능 (content_selector)
+  - 프론트엔드: 설정 탭에 콘텐츠 변경 감지 UI 추가
+- 5.3 키워드 모니터링 구현 완료
+  - MonitoringSetting 모델: keyword_monitoring, keywords (JSON 배열), keyword_alert_on_found 필드 추가
+  - scheduler.py: _check_keywords 메서드 추가
+  - 키워드 발견 시 알림 또는 키워드 없을 때 알림 선택 가능
+  - 프론트엔드: 설정 탭에 키워드 모니터링 UI 추가
+  - CSS: form-radio, form-radio-group 스타일 추가
+- 5.4 커스텀 헤더 지원 구현 완료
+  - Project 모델: custom_headers 필드 추가 (JSON 형식)
+  - MonitoringService: check_project_status에서 커스텀 헤더 적용
+  - 프론트엔드: 설정 탭에 커스텀 HTTP 헤더 입력 UI 추가
+  - dashboard.js: parseCustomHeadersToText, parseTextToCustomHeaders 헬퍼 메서드 추가
+  - DB 마이그레이션 적용

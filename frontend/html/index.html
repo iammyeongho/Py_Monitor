@@ -343,6 +343,28 @@
               </div>
             </div>
 
+            <!-- 유지보수 모드 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">유지보수 모드</h5>
+
+            <div class="form-group">
+              <label class="form-label form-checkbox">
+                <input type="checkbox" id="detail-maintenance-mode">
+                <span>유지보수 모드 활성화</span>
+              </label>
+              <span class="form-hint">활성화하면 모니터링이 일시 중지되고 알림이 발송되지 않습니다</span>
+            </div>
+
+            <div class="form-group" id="maintenance-message-group" style="display: none;">
+              <label class="form-label" for="detail-maintenance-message">유지보수 안내 메시지</label>
+              <input type="text" class="form-input" id="detail-maintenance-message" placeholder="예: 서버 점검 중입니다" maxlength="500">
+            </div>
+
+            <div class="form-group" id="maintenance-ends-group" style="display: none;">
+              <label class="form-label" for="detail-maintenance-ends">예정 종료 시간</label>
+              <input type="datetime-local" class="form-input" id="detail-maintenance-ends">
+            </div>
+
             <!-- 공개 설정 -->
             <div class="form-section-divider"></div>
             <h5 class="form-subsection-title">공개 설정</h5>
@@ -376,6 +398,67 @@
               <label class="form-label" for="detail-webhook-url">웹훅 URL</label>
               <input type="url" class="form-input" id="detail-webhook-url" placeholder="https://hooks.slack.com/...">
               <span class="form-hint">Slack, Discord 등 웹훅 URL</span>
+            </div>
+
+            <!-- 콘텐츠 변경 감지 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">콘텐츠 변경 감지</h5>
+
+            <div class="form-group">
+              <label class="form-label form-checkbox">
+                <input type="checkbox" id="detail-content-change-detection">
+                <span>콘텐츠 변경 감지 활성화</span>
+              </label>
+              <span class="form-hint">페이지 콘텐츠가 변경되면 알림을 발송합니다</span>
+            </div>
+
+            <div class="form-group" id="content-selector-group" style="display: none;">
+              <label class="form-label" for="detail-content-selector">감시 영역 (CSS 태그)</label>
+              <input type="text" class="form-input" id="detail-content-selector" placeholder="예: main, article, div">
+              <span class="form-hint">비워두면 전체 페이지를 감시합니다. HTML 태그명을 입력하세요</span>
+            </div>
+
+            <!-- 키워드 모니터링 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">키워드 모니터링</h5>
+
+            <div class="form-group">
+              <label class="form-label form-checkbox">
+                <input type="checkbox" id="detail-keyword-monitoring">
+                <span>키워드 모니터링 활성화</span>
+              </label>
+              <span class="form-hint">특정 키워드의 존재 여부를 감시합니다</span>
+            </div>
+
+            <div class="form-group" id="keywords-group" style="display: none;">
+              <label class="form-label" for="detail-keywords">감시할 키워드</label>
+              <textarea class="form-input form-textarea" id="detail-keywords" rows="3" placeholder="키워드1&#10;키워드2&#10;키워드3"></textarea>
+              <span class="form-hint">줄바꿈으로 구분하여 여러 키워드를 입력하세요</span>
+            </div>
+
+            <div class="form-group" id="keyword-alert-mode-group" style="display: none;">
+              <label class="form-label">알림 조건</label>
+              <div class="form-radio-group">
+                <label class="form-radio">
+                  <input type="radio" name="keyword-alert-mode" value="found" checked>
+                  <span>키워드 발견 시 알림</span>
+                </label>
+                <label class="form-radio">
+                  <input type="radio" name="keyword-alert-mode" value="not_found">
+                  <span>키워드 없을 때 알림</span>
+                </label>
+              </div>
+              <span class="form-hint">"발견 시 알림"은 금지어 감지에, "없을 때 알림"은 필수 콘텐츠 확인에 유용합니다</span>
+            </div>
+
+            <!-- 커스텀 헤더 설정 -->
+            <div class="form-section-divider"></div>
+            <h5 class="form-subsection-title">커스텀 HTTP 헤더</h5>
+
+            <div class="form-group">
+              <label class="form-label" for="detail-custom-headers">요청 헤더</label>
+              <textarea class="form-input form-textarea" id="detail-custom-headers" rows="4" placeholder="Authorization: Bearer your-token&#10;X-API-Key: your-api-key&#10;Custom-Header: value"></textarea>
+              <span class="form-hint">한 줄에 하나씩 "헤더명: 값" 형식으로 입력하세요. 인증이 필요한 API 모니터링에 유용합니다.</span>
             </div>
 
             <div class="modal-footer">

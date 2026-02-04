@@ -92,6 +92,13 @@ class MonitoringSettingBase(BaseModel):
     is_alert_enabled: bool = True
     alert_email: Optional[str] = None
     webhook_url: Optional[str] = None
+    # 콘텐츠 변경 감지 설정
+    content_change_detection: bool = False
+    content_selector: Optional[str] = None
+    # 키워드 모니터링 설정
+    keyword_monitoring: bool = False
+    keywords: Optional[str] = None  # JSON 배열 문자열
+    keyword_alert_on_found: bool = True
 
 
 class MonitoringSettingCreate(MonitoringSettingBase):
@@ -106,10 +113,19 @@ class MonitoringSettingUpdate(BaseModel):
     is_alert_enabled: Optional[bool] = None
     alert_email: Optional[str] = None
     webhook_url: Optional[str] = None
+    # 콘텐츠 변경 감지 설정
+    content_change_detection: Optional[bool] = None
+    content_selector: Optional[str] = None
+    # 키워드 모니터링 설정
+    keyword_monitoring: Optional[bool] = None
+    keywords: Optional[str] = None
+    keyword_alert_on_found: Optional[bool] = None
 
 
 class MonitoringSettingResponse(MonitoringSettingBase):
     id: int
+    content_hash: Optional[str] = None
+    last_content_check_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -191,6 +207,7 @@ class MonitoringStatus(BaseModel):
     response_time: Optional[float] = None
     status_code: Optional[int] = None
     error_message: Optional[str] = None
+    content: Optional[str] = None  # 콘텐츠 변경 감지용
 
 
 # 모니터링 응답 스키마
