@@ -105,6 +105,9 @@ def check_domain_expiry(domain: str) -> Dict:
         if expiry_date is None:
             return {"valid": False, "error": "만료일 정보를 찾을 수 없습니다"}
 
+        # timezone-aware datetime 대응 (python-whois 등에서 반환)
+        if hasattr(expiry_date, 'tzinfo') and expiry_date.tzinfo:
+            expiry_date = expiry_date.replace(tzinfo=None)
         days_until_expiry = (expiry_date - datetime.now()).days
 
         return {

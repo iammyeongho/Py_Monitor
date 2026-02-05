@@ -617,6 +617,9 @@ class MonitoringScheduler:
                 return
 
             expiry_date = ssl_result["expiry_date"]
+            # timezone-aware datetime 대응 (python-whois 등에서 반환)
+            if hasattr(expiry_date, 'tzinfo') and expiry_date.tzinfo:
+                expiry_date = expiry_date.replace(tzinfo=None)
             days_remaining = (expiry_date - datetime.now()).days
 
             # 이미 만료된 경우
@@ -654,6 +657,9 @@ class MonitoringScheduler:
             if not expiry_date:
                 return
 
+            # timezone-aware datetime 대응 (python-whois 등에서 반환)
+            if hasattr(expiry_date, 'tzinfo') and expiry_date.tzinfo:
+                expiry_date = expiry_date.replace(tzinfo=None)
             days_remaining = (expiry_date - datetime.now()).days
 
             # 이미 만료된 경우
