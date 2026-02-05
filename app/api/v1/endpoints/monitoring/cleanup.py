@@ -38,8 +38,8 @@ async def cleanup_logs(
     """오래된 모니터링 로그를 정리합니다."""
     from app.services.cleanup_service import CleanupService
 
-    if retention_days < 7:
-        raise HTTPException(status_code=400, detail="최소 보관 기간은 7일입니다.")
+    if retention_days < 0:
+        raise HTTPException(status_code=400, detail="보관 기간은 0일 이상이어야 합니다.")
 
     cleanup_service = CleanupService(db)
     deleted_count = cleanup_service.cleanup_monitoring_logs(
@@ -65,8 +65,8 @@ async def cleanup_alerts(
     """오래된 알림을 정리합니다."""
     from app.services.cleanup_service import CleanupService
 
-    if retention_days < 7:
-        raise HTTPException(status_code=400, detail="최소 보관 기간은 7일입니다.")
+    if retention_days < 0:
+        raise HTTPException(status_code=400, detail="보관 기간은 0일 이상이어야 합니다.")
 
     cleanup_service = CleanupService(db)
     deleted_count = cleanup_service.cleanup_alerts(
@@ -93,8 +93,8 @@ async def cleanup_all(
     """모든 오래된 로그를 정리합니다."""
     from app.services.cleanup_service import CleanupService
 
-    if log_retention_days < 7 or alert_retention_days < 7 or email_log_retention_days < 7:
-        raise HTTPException(status_code=400, detail="최소 보관 기간은 7일입니다.")
+    if log_retention_days < 0 or alert_retention_days < 0 or email_log_retention_days < 0:
+        raise HTTPException(status_code=400, detail="보관 기간은 0일 이상이어야 합니다.")
 
     cleanup_service = CleanupService(db)
     results = cleanup_service.cleanup_all(

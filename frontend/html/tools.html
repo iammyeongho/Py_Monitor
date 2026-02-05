@@ -435,19 +435,19 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="log-retention">모니터링 로그 보관 기간 (일)</label>
-                <input type="number" class="form-input" id="log-retention" min="7" max="365" value="30">
-                <span class="form-hint">최소 7일</span>
+                <input type="number" class="form-input" id="log-retention" min="0" max="365" value="7">
+                <span class="form-hint">0 = 전체 삭제</span>
               </div>
               <div class="form-group">
                 <label class="form-label" for="alert-retention">알림 보관 기간 (일)</label>
-                <input type="number" class="form-input" id="alert-retention" min="7" max="365" value="90">
-                <span class="form-hint">최소 7일</span>
+                <input type="number" class="form-input" id="alert-retention" min="0" max="365" value="7">
+                <span class="form-hint">0 = 전체 삭제</span>
               </div>
             </div>
 
             <div class="form-group">
               <label class="form-label" for="email-log-retention">이메일 로그 보관 기간 (일)</label>
-              <input type="number" class="form-input" id="email-log-retention" min="7" max="365" value="30" style="max-width: 200px;">
+              <input type="number" class="form-input" id="email-log-retention" min="0" max="365" value="7" style="max-width: 200px;">
             </div>
 
             <div class="cleanup-actions">
@@ -1477,22 +1477,35 @@
         }
 
         const result = await response.json();
+        const totalDeleted = result.monitoring_logs_deleted + result.alerts_deleted + result.email_logs_deleted;
 
-        resultDiv.innerHTML = `
-          <div class="result-header result-success">
-            <span class="result-icon">✓</span>
-            <span class="result-title">정리 완료</span>
-          </div>
-          <div class="result-details">
-            <div class="result-row"><span>삭제된 모니터링 로그</span><span>${result.monitoring_logs_deleted}개</span></div>
-            <div class="result-row"><span>삭제된 알림</span><span>${result.alerts_deleted}개</span></div>
-            <div class="result-row"><span>삭제된 이메일 로그</span><span>${result.email_logs_deleted}개</span></div>
-            <div class="result-row"><span>정리 시간</span><span>${formatDateTime(result.cleanup_time)}</span></div>
-          </div>
-        `;
+        if (totalDeleted === 0) {
+          resultDiv.innerHTML = `
+            <div class="result-header result-warning">
+              <span class="result-icon">!</span>
+              <span class="result-title">삭제할 데이터 없음</span>
+            </div>
+            <div class="result-details">
+              <div class="result-row"><span>안내</span><span>보관 기간 내 데이터만 존재합니다. 보관 기간을 줄여보세요.</span></div>
+            </div>
+          `;
+          showToast('삭제할 데이터가 없습니다. 보관 기간을 줄여보세요.', 'warning');
+        } else {
+          resultDiv.innerHTML = `
+            <div class="result-header result-success">
+              <span class="result-icon">✓</span>
+              <span class="result-title">정리 완료 (총 ${totalDeleted.toLocaleString()}건 삭제)</span>
+            </div>
+            <div class="result-details">
+              <div class="result-row"><span>삭제된 모니터링 로그</span><span>${result.monitoring_logs_deleted.toLocaleString()}개</span></div>
+              <div class="result-row"><span>삭제된 알림</span><span>${result.alerts_deleted.toLocaleString()}개</span></div>
+              <div class="result-row"><span>삭제된 이메일 로그</span><span>${result.email_logs_deleted.toLocaleString()}개</span></div>
+              <div class="result-row"><span>정리 시간</span><span>${formatDateTime(result.cleanup_time)}</span></div>
+            </div>
+          `;
+          showToast(`${totalDeleted.toLocaleString()}건의 데이터가 삭제되었습니다.`, 'success');
+        }
         resultDiv.style.display = 'block';
-
-        showToast('로그 정리가 완료되었습니다.', 'success');
 
         // 통계 새로고침
         loadCleanupStats();
