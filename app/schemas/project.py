@@ -69,8 +69,8 @@ class Project(ProjectBase, BaseSchema):
     status: bool = True
     is_active: bool = True
     deleted_at: Optional[datetime] = None
-    # 유지보수 모드 필드
-    maintenance_mode: bool = False
+    # 유지보수 모드 필드 (DB에 NULL이 있을 수 있으므로 Optional)
+    maintenance_mode: Optional[bool] = False
     maintenance_message: Optional[str] = None
     maintenance_started_at: Optional[datetime] = None
     maintenance_ends_at: Optional[datetime] = None
