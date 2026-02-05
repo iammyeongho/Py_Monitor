@@ -9,6 +9,8 @@ from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.project import Project
 from app.schemas.monitoring import (
+    APIEndpointCheckRequest,
+    APIEndpointCheckResponse,
     ContentCheckRequest,
     ContentCheckResponse,
     DNSLookupRequest,
@@ -21,8 +23,12 @@ from app.schemas.monitoring import (
     PlaywrightResources,
     SecurityHeadersRequest,
     SecurityHeadersResponse,
+    SyntheticTestRequest,
+    SyntheticTestResponse,
     TCPPortCheckRequest,
     TCPPortCheckResponse,
+    UDPPortCheckRequest,
+    UDPPortCheckResponse,
 )
 from app.services.monitoring import MonitoringService
 from app.services.playwright_monitor import PlaywrightMonitorService
@@ -42,6 +48,53 @@ async def check_tcp_port(
         host=request.host,
         port=request.port,
         timeout=request.timeout,
+    )
+    return result
+
+
+@router.post("/check/udp", response_model=UDPPortCheckResponse)
+async def check_udp_port(
+    request: UDPPortCheckRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """UDP 포트 연결 가능 여부를 확인합니다.
+
+    UDP는 비연결형 프로토콜로 TCP와 다르게 동작합니다:
+    - 응답 없음: open|filtered (포트 열림 또는 방화벽 필터링)
+    - ICMP unreachable: 포트 닫힘
+    """
+    service = MonitoringService(db)
+    result = await service.check_udp_port(
+        host=request.host,
+        port=request.port,
+        timeout=request.timeout,
+    )
+    return result
+
+
+@router.post("/check/api", response_model=APIEndpointCheckResponse)
+async def check_api_endpoint(
+    request: APIEndpointCheckRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """API 엔드포인트를 체크하고 JSON 응답을 검증합니다.
+
+    - HTTP 메서드, 헤더, 바디를 지정하여 요청
+    - 상태 코드 검증
+    - JSON 응답 경로/값 검증 (dot-notation)
+    """
+    service = MonitoringService(db)
+    result = await service.check_api_endpoint(
+        url=request.url,
+        method=request.method,
+        headers=request.headers,
+        body=request.body,
+        timeout=request.timeout,
+        expected_status=request.expected_status,
+        expected_json_path=request.expected_json_path,
+        expected_json_value=request.expected_json_value,
     )
     return result
 
@@ -153,3 +206,29 @@ async def check_deep_monitoring(
         ),
         checked_at=datetime.now(timezone.utc)
     )
+
+
+@router.post("/check/synthetic", response_model=SyntheticTestResponse)
+async def run_synthetic_test(
+    request: SyntheticTestRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Synthetic 모니터링 시나리오를 실행합니다.
+
+    사용자가 정의한 시나리오(스텝 목록)를 Playwright로 순차 실행하여
+    로그인, 폼 제출, 페이지 이동 등의 사용자 시나리오를 테스트합니다.
+
+    지원 액션: navigate, click, type, select, wait, screenshot,
+    assert_text, assert_element, assert_url
+    """
+    service = PlaywrightMonitorService(db)
+    result = await service.run_synthetic_test(
+        name=request.name,
+        start_url=request.start_url,
+        steps=request.steps,
+        timeout=request.timeout,
+        viewport_width=request.viewport_width,
+        viewport_height=request.viewport_height,
+    )
+    return result

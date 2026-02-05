@@ -242,6 +242,27 @@ class TCPPortCheckResponse(BaseModel):
     checked_at: datetime = Field(default_factory=datetime.now)
 
 
+# UDP 포트 체크 스키마
+class UDPPortCheckRequest(BaseModel):
+    """UDP 포트 체크 요청 스키마"""
+
+    host: str
+    port: int = Field(ge=1, le=65535)
+    timeout: int = Field(default=5, ge=1, le=30)
+
+
+class UDPPortCheckResponse(BaseModel):
+    """UDP 포트 체크 응답 스키마"""
+
+    host: str
+    port: int
+    is_open: bool  # UDP는 응답 없음 = 열림으로 추정
+    is_filtered: bool = False  # 응답 없으면 open|filtered
+    response_time: Optional[float] = None
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
 # DNS 조회 스키마
 class DNSLookupRequest(BaseModel):
     """DNS 조회 요청 스키마"""
@@ -264,6 +285,104 @@ class DNSLookupResponse(BaseModel):
     domain: str
     records: list[DNSRecord] = []
     is_resolved: bool
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# API 엔드포인트 체크 스키마
+class APIEndpointCheckRequest(BaseModel):
+    """API 엔드포인트 체크 요청 스키마"""
+
+    url: str
+    method: str = Field(default="GET", pattern="^(GET|POST|PUT|PATCH|DELETE|HEAD)$")
+    headers: Optional[dict] = None  # 커스텀 헤더
+    body: Optional[str] = None  # 요청 바디 (JSON 문자열)
+    timeout: int = Field(default=30, ge=5, le=120)
+    expected_status: Optional[int] = Field(None, ge=100, le=599)  # 기대 상태 코드
+    expected_json_path: Optional[str] = None  # 검증할 JSON 경로 (예: "data.id")
+    expected_json_value: Optional[str] = None  # 기대 JSON 값
+
+
+class APIEndpointValidation(BaseModel):
+    """API 엔드포인트 검증 결과"""
+
+    field: str  # 검증 필드명 (status_code, json_path 등)
+    expected: str  # 기대값
+    actual: str  # 실제값
+    passed: bool  # 통과 여부
+
+
+class APIEndpointCheckResponse(BaseModel):
+    """API 엔드포인트 체크 응답 스키마"""
+
+    url: str
+    method: str
+    status_code: Optional[int] = None
+    response_time: Optional[float] = None
+    response_body: Optional[str] = None  # 응답 본문 (최대 1000자)
+    content_type: Optional[str] = None
+    is_json: bool = False  # JSON 응답 여부
+    validations: list[APIEndpointValidation] = Field(default_factory=list)
+    all_passed: bool = False  # 모든 검증 통과 여부
+    error_message: Optional[str] = None
+    checked_at: datetime = Field(default_factory=datetime.now)
+
+
+# Synthetic 모니터링 스키마
+class SyntheticStep(BaseModel):
+    """시나리오 단일 스텝 정의"""
+
+    action: str = Field(
+        ...,
+        pattern="^(navigate|click|type|select|wait|screenshot|assert_text|assert_element|assert_url)$",
+        description="수행할 액션 종류",
+    )
+    selector: Optional[str] = Field(
+        None, description="CSS 선택자 (click, type, select, assert_element에 필요)"
+    )
+    value: Optional[str] = Field(
+        None, description="입력값 (navigate=URL, type=텍스트, select=옵션값, wait=ms, assert_text=기대문자열)"
+    )
+    description: Optional[str] = Field(
+        None, description="스텝 설명 (예: '로그인 버튼 클릭')"
+    )
+
+
+class SyntheticTestRequest(BaseModel):
+    """Synthetic 모니터링 테스트 요청"""
+
+    name: str = Field(..., min_length=1, max_length=200, description="테스트 시나리오 이름")
+    start_url: str = Field(..., description="시작 URL")
+    steps: list[SyntheticStep] = Field(..., min_length=1, description="실행할 스텝 목록")
+    timeout: int = Field(default=30000, ge=5000, le=120000, description="전체 타임아웃 (ms)")
+    viewport_width: int = Field(default=1280, ge=320, le=1920)
+    viewport_height: int = Field(default=800, ge=480, le=1080)
+
+
+class SyntheticStepResult(BaseModel):
+    """시나리오 스텝 실행 결과"""
+
+    step_number: int
+    action: str
+    description: Optional[str] = None
+    passed: bool = False
+    duration_ms: float = 0.0
+    error_message: Optional[str] = None
+    screenshot_path: Optional[str] = None  # 스크린샷 저장 경로 (있는 경우)
+    current_url: Optional[str] = None
+
+
+class SyntheticTestResponse(BaseModel):
+    """Synthetic 모니터링 테스트 응답"""
+
+    name: str
+    start_url: str
+    total_steps: int
+    passed_steps: int
+    failed_steps: int
+    all_passed: bool = False
+    total_duration_ms: float = 0.0
+    step_results: list[SyntheticStepResult] = Field(default_factory=list)
     error_message: Optional[str] = None
     checked_at: datetime = Field(default_factory=datetime.now)
 
@@ -448,3 +567,88 @@ class DashboardChartData(BaseModel):
     availability: list[AvailabilityChartData] = Field(default_factory=list)
     period_start: datetime
     period_end: datetime
+
+
+# Uptime SLA 리포트 스키마
+class SLAIncident(BaseModel):
+    """SLA 장애 인시던트"""
+
+    started_at: datetime
+    ended_at: Optional[datetime] = None
+    duration_minutes: float  # 장애 지속 시간 (분)
+    error_message: Optional[str] = None
+
+
+class SLADailyEntry(BaseModel):
+    """일별 SLA 데이터"""
+
+    date: str  # YYYY-MM-DD
+    total_checks: int = 0
+    available_checks: int = 0
+    uptime_percentage: float = 100.0
+    avg_response_time: Optional[float] = None  # ms
+    incidents_count: int = 0
+
+
+class SLAMetrics(BaseModel):
+    """SLA 핵심 지표"""
+
+    target_uptime: float = 99.9  # SLA 목표 (%)
+    achieved_uptime: float = 100.0  # 실제 달성 가용률 (%)
+    sla_met: bool = True  # SLA 충족 여부
+    total_checks: int = 0
+    available_checks: int = 0
+    failed_checks: int = 0
+    total_downtime_minutes: float = 0.0  # 총 다운타임 (분)
+    allowed_downtime_minutes: float = 0.0  # SLA 허용 다운타임 (분)
+    incidents_count: int = 0
+    avg_response_time: Optional[float] = None  # 평균 응답시간 (ms)
+    max_response_time: Optional[float] = None  # 최대 응답시간 (ms)
+    min_response_time: Optional[float] = None  # 최소 응답시간 (ms)
+    p95_response_time: Optional[float] = None  # P95 응답시간 (ms)
+
+
+class SLAReport(BaseModel):
+    """Uptime SLA 리포트"""
+
+    project_id: int
+    project_title: str
+    project_url: str
+    period_start: datetime
+    period_end: datetime
+    period_days: int
+    metrics: SLAMetrics
+    daily_breakdown: list[SLADailyEntry] = Field(default_factory=list)
+    incidents: list[SLAIncident] = Field(default_factory=list)
+    generated_at: datetime = Field(default_factory=datetime.now)
+
+
+# 이상 탐지 스키마
+class AnomalyDetail(BaseModel):
+    """개별 이상 징후 상세"""
+
+    type: str  # response_time_spike, availability_drop, error_rate_increase, pattern_change
+    severity: str = "warning"  # info, warning, critical
+    message: str
+    detected_at: datetime
+    metric_name: str  # 관련 메트릭 이름
+    current_value: float  # 현재 값
+    baseline_value: float  # 기준 값 (정상 범위)
+    deviation_percent: float  # 편차 (%)
+
+
+class AnomalyAnalysis(BaseModel):
+    """이상 탐지 분석 결과"""
+
+    project_id: int
+    project_title: str
+    analysis_period_hours: int
+    baseline_period_hours: int
+    total_anomalies: int = 0
+    critical_count: int = 0
+    warning_count: int = 0
+    info_count: int = 0
+    anomalies: list[AnomalyDetail] = Field(default_factory=list)
+    baseline_stats: dict = Field(default_factory=dict)
+    current_stats: dict = Field(default_factory=dict)
+    analyzed_at: datetime = Field(default_factory=datetime.now)

@@ -17,9 +17,11 @@
 
 import asyncio
 import dns.resolver
+import json
 import logging
 import socket
 import ssl
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
@@ -33,6 +35,8 @@ from app.models.monitoring import MonitoringAlert, MonitoringLog, MonitoringSett
 from app.models.project import Project
 from app.models.ssl_domain import SSLDomainStatus
 from app.schemas.monitoring import (
+    APIEndpointCheckResponse,
+    APIEndpointValidation,
     ContentCheckResponse,
     DNSLookupResponse,
     DNSRecord,
@@ -47,6 +51,7 @@ from app.schemas.monitoring import (
     SSLDomainStatusCreate,
     SSLStatus,
     TCPPortCheckResponse,
+    UDPPortCheckResponse,
 )
 from app.utils.notifications import NotificationService
 
@@ -252,11 +257,24 @@ class MonitoringService:
             return {"is_valid": False, "expiry_date": None, "error_message": str(e)}
 
     async def check_domain_expiry(self, project: Project) -> Optional[datetime]:
-        """도메인 만료일 확인"""
+        """도메인 만료일 확인
+
+        Returns:
+            만료일 datetime 또는 None (오류/정보 없음)
+        """
         try:
             domain = project.url.split("//")[-1].split("/")[0]
             w = whois.whois(domain)
-            return w.expiration_date
+            expiry = w.expiration_date
+
+            if expiry is None:
+                return None
+
+            # python-whois는 리스트로 반환하는 경우가 있음
+            if isinstance(expiry, list):
+                expiry = expiry[0] if expiry else None
+
+            return expiry
         except Exception as e:
             logger.error(
                 f"Error checking domain expiry for project {project.id}: {str(e)}"
@@ -301,6 +319,70 @@ class MonitoringService:
         except Exception as e:
             logger.error(f"Error checking TCP port {host}:{port}: {str(e)}")
             return TCPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=False,
+                error_message=str(e),
+            )
+
+    async def check_udp_port(
+        self, host: str, port: int, timeout: int = 5
+    ) -> UDPPortCheckResponse:
+        """UDP 포트 연결 가능 여부 확인
+
+        UDP는 비연결형 프로토콜이므로 TCP와 다르게 동작합니다:
+        - ICMP Port Unreachable 응답: 포트 닫힘 (확실)
+        - 응답 없음: 포트 열림 또는 필터링됨 (open|filtered)
+        - 데이터 응답: 포트 열림 (확실)
+        """
+        start_time = datetime.now()
+        try:
+            loop = asyncio.get_event_loop()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.settimeout(timeout)
+
+            # UDP 패킷 전송
+            await loop.run_in_executor(
+                None, sock.sendto, b'\x00', (host, port)
+            )
+
+            # 응답 대기
+            try:
+                await loop.run_in_executor(None, sock.recv, 1024)
+                response_time = (datetime.now() - start_time).total_seconds()
+                sock.close()
+                # 응답이 있으면 포트가 열려있음
+                return UDPPortCheckResponse(
+                    host=host,
+                    port=port,
+                    is_open=True,
+                    is_filtered=False,
+                    response_time=response_time,
+                )
+            except socket.timeout:
+                response_time = (datetime.now() - start_time).total_seconds()
+                sock.close()
+                # 타임아웃 = 응답 없음 = open|filtered
+                return UDPPortCheckResponse(
+                    host=host,
+                    port=port,
+                    is_open=True,
+                    is_filtered=True,
+                    response_time=response_time,
+                    error_message="open|filtered (응답 없음)",
+                )
+        except ConnectionRefusedError:
+            # ICMP Port Unreachable = 포트 닫힘
+            return UDPPortCheckResponse(
+                host=host,
+                port=port,
+                is_open=False,
+                is_filtered=False,
+                error_message="Port closed (ICMP unreachable)",
+            )
+        except Exception as e:
+            logger.error(f"Error checking UDP port {host}:{port}: {str(e)}")
+            return UDPPortCheckResponse(
                 host=host,
                 port=port,
                 is_open=False,
@@ -504,6 +586,194 @@ class MonitoringService:
                 score=0,
                 error_message=str(e),
             )
+
+    async def check_api_endpoint(
+        self,
+        url: str,
+        method: str = "GET",
+        headers: Optional[Dict] = None,
+        body: Optional[str] = None,
+        timeout: int = 30,
+        expected_status: Optional[int] = None,
+        expected_json_path: Optional[str] = None,
+        expected_json_value: Optional[str] = None,
+    ) -> APIEndpointCheckResponse:
+        """API 엔드포인트 체크 (JSON 응답 검증 포함)
+
+        HTTP 요청을 보내고 상태 코드, 응답 시간, JSON 응답을 검증합니다.
+        JSONPath 형식으로 중첩된 JSON 값을 검증할 수 있습니다 (예: "data.user.id").
+        """
+        validations = []
+        start_time = time.time()
+
+        try:
+            # 요청 헤더 구성
+            request_headers = {"Accept": "application/json"}
+            if headers:
+                request_headers.update(headers)
+
+            # 요청 바디 파싱 (JSON 문자열 → dict)
+            request_body = None
+            if body:
+                try:
+                    request_body = json.loads(body)
+                    if "Content-Type" not in request_headers:
+                        request_headers["Content-Type"] = "application/json"
+                except json.JSONDecodeError:
+                    # JSON이 아닌 경우 문자열 그대로 전송
+                    request_body = body
+
+            client_timeout = aiohttp.ClientTimeout(total=timeout)
+
+            async with aiohttp.ClientSession(
+                timeout=client_timeout
+            ) as session:
+                # HTTP 메서드별 요청 발송
+                request_kwargs = {"headers": request_headers, "ssl": False}
+                if request_body and method in ("POST", "PUT", "PATCH"):
+                    if isinstance(request_body, dict):
+                        request_kwargs["json"] = request_body
+                    else:
+                        request_kwargs["data"] = request_body
+
+                async with session.request(
+                    method, url, **request_kwargs
+                ) as response:
+                    response_time = round(
+                        (time.time() - start_time) * 1000, 2
+                    )
+                    status_code = response.status
+                    content_type = response.headers.get(
+                        "Content-Type", ""
+                    )
+
+                    # 응답 본문 읽기 (최대 10KB)
+                    raw_body = await response.read()
+                    response_text = raw_body[:10240].decode(
+                        "utf-8", errors="replace"
+                    )
+                    # 표시용은 1000자까지
+                    display_body = (
+                        response_text[:1000] + "..."
+                        if len(response_text) > 1000
+                        else response_text
+                    )
+
+                    # JSON 여부 판별
+                    is_json = False
+                    json_data = None
+                    if "application/json" in content_type:
+                        try:
+                            json_data = json.loads(response_text)
+                            is_json = True
+                        except json.JSONDecodeError:
+                            pass
+
+                    # 검증 1: 상태 코드
+                    if expected_status is not None:
+                        validations.append(
+                            APIEndpointValidation(
+                                field="status_code",
+                                expected=str(expected_status),
+                                actual=str(status_code),
+                                passed=status_code == expected_status,
+                            )
+                        )
+
+                    # 검증 2: JSON 경로 값 검증
+                    if (
+                        expected_json_path
+                        and expected_json_value is not None
+                    ):
+                        actual_value = self._resolve_json_path(
+                            json_data, expected_json_path
+                        )
+                        actual_str = (
+                            str(actual_value)
+                            if actual_value is not None
+                            else "null"
+                        )
+                        validations.append(
+                            APIEndpointValidation(
+                                field=f"json:{expected_json_path}",
+                                expected=expected_json_value,
+                                actual=actual_str,
+                                passed=actual_str
+                                == expected_json_value,
+                            )
+                        )
+
+                    # 모든 검증 통과 여부
+                    all_passed = (
+                        all(v.passed for v in validations)
+                        if validations
+                        else True
+                    )
+
+                    return APIEndpointCheckResponse(
+                        url=url,
+                        method=method,
+                        status_code=status_code,
+                        response_time=response_time,
+                        response_body=display_body,
+                        content_type=content_type,
+                        is_json=is_json,
+                        validations=validations,
+                        all_passed=all_passed,
+                    )
+
+        except asyncio.TimeoutError:
+            response_time = round((time.time() - start_time) * 1000, 2)
+            return APIEndpointCheckResponse(
+                url=url,
+                method=method,
+                response_time=response_time,
+                error_message="요청 시간이 초과되었습니다",
+            )
+        except Exception as e:
+            response_time = round((time.time() - start_time) * 1000, 2)
+            logger.error(
+                f"API endpoint check error for {url}: {str(e)}"
+            )
+            return APIEndpointCheckResponse(
+                url=url,
+                method=method,
+                response_time=response_time,
+                error_message=str(e),
+            )
+
+    def _resolve_json_path(self, data: dict, path: str):
+        """JSON 경로를 따라 값을 추출합니다.
+
+        "data.user.id" 같은 dot-notation 경로를 지원합니다.
+        배열 인덱스는 "data.items.0.name" 형식으로 접근합니다.
+        """
+        if data is None:
+            return None
+
+        keys = path.split(".")
+        current = data
+
+        for key in keys:
+            if current is None:
+                return None
+
+            # 배열 인덱스 처리
+            if isinstance(current, list):
+                try:
+                    index = int(key)
+                    if 0 <= index < len(current):
+                        current = current[index]
+                    else:
+                        return None
+                except ValueError:
+                    return None
+            elif isinstance(current, dict):
+                current = current.get(key)
+            else:
+                return None
+
+        return current
 
     async def create_alert(
         self, project_id: int, alert_type: str, message: str

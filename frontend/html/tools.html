@@ -22,9 +22,14 @@
       <!-- 도구 탭 -->
       <div class="tabs">
         <button class="tab-btn active" data-tab="tcp">TCP 포트 체크</button>
+        <button class="tab-btn" data-tab="udp">UDP 포트 체크</button>
+        <button class="tab-btn" data-tab="api">API 체크</button>
         <button class="tab-btn" data-tab="dns">DNS 조회</button>
         <button class="tab-btn" data-tab="content">콘텐츠 검증</button>
         <button class="tab-btn" data-tab="security">보안 헤더</button>
+        <button class="tab-btn" data-tab="synthetic">Synthetic</button>
+        <button class="tab-btn" data-tab="sla">SLA 리포트</button>
+        <button class="tab-btn" data-tab="anomaly">이상 탐지</button>
         <button class="tab-btn" data-tab="cleanup">로그 정리</button>
       </div>
 
@@ -56,6 +61,106 @@
           </form>
 
           <div class="tool-result" id="tcp-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- UDP 포트 체크 -->
+      <div class="tab-content" id="tab-udp">
+        <div class="tool-card">
+          <h3 class="tool-title">UDP 포트 체크</h3>
+          <p class="tool-description">서버의 UDP 포트 상태를 확인합니다. UDP는 비연결형 프로토콜로, 응답 없음은 open|filtered를 의미합니다.</p>
+
+          <form id="udp-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="udp-host">호스트</label>
+                <input type="text" class="form-input" id="udp-host" placeholder="example.com" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="udp-port">포트</label>
+                <input type="number" class="form-input" id="udp-port" min="1" max="65535" value="53" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="udp-timeout">타임아웃 (초)</label>
+                <input type="number" class="form-input" id="udp-timeout" min="1" max="30" value="5">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">체크</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="udp-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- API 엔드포인트 체크 -->
+      <div class="tab-content" id="tab-api">
+        <div class="tool-card">
+          <h3 class="tool-title">API 엔드포인트 체크</h3>
+          <p class="tool-description">API 엔드포인트에 HTTP 요청을 보내고 상태 코드, JSON 응답을 검증합니다.</p>
+
+          <form id="api-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group" style="flex: 3;">
+                <label class="form-label" for="api-url">URL</label>
+                <input type="url" class="form-input" id="api-url" placeholder="https://api.example.com/v1/health" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="api-method">메서드</label>
+                <select class="form-input" id="api-method">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="HEAD">HEAD</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="api-timeout">타임아웃 (초)</label>
+                <input type="number" class="form-input" id="api-timeout" min="5" max="120" value="30">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="api-headers">커스텀 헤더 (JSON)</label>
+              <textarea class="form-input" id="api-headers" rows="2" placeholder='{"Authorization": "Bearer token123"}'></textarea>
+              <span class="form-hint">JSON 형식으로 입력하세요</span>
+            </div>
+
+            <div class="form-group" id="api-body-group">
+              <label class="form-label" for="api-body">요청 바디 (JSON)</label>
+              <textarea class="form-input" id="api-body" rows="3" placeholder='{"key": "value"}'></textarea>
+              <span class="form-hint">POST, PUT, PATCH 요청 시 사용됩니다</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="api-expected-status">기대 상태 코드</label>
+                <input type="number" class="form-input" id="api-expected-status" min="100" max="599" placeholder="200">
+                <span class="form-hint">비워두면 검증하지 않습니다</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="api-json-path">JSON 경로</label>
+                <input type="text" class="form-input" id="api-json-path" placeholder="data.status">
+                <span class="form-hint">dot-notation (예: data.user.id)</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="api-json-value">기대 JSON 값</label>
+                <input type="text" class="form-input" id="api-json-value" placeholder="ok">
+                <span class="form-hint">JSON 경로의 기대값</span>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">체크</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="api-result" style="display: none;"></div>
         </div>
       </div>
 
@@ -143,6 +248,172 @@
         </div>
       </div>
 
+      <!-- Synthetic 모니터링 -->
+      <div class="tab-content" id="tab-synthetic">
+        <div class="tool-card">
+          <h3 class="tool-title">Synthetic 모니터링</h3>
+          <p class="tool-description">사용자 시나리오(로그인, 폼 제출, 페이지 이동 등)를 Playwright로 자동 실행합니다.</p>
+
+          <form id="synthetic-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="synthetic-name">시나리오 이름</label>
+                <input type="text" class="form-input" id="synthetic-name" placeholder="로그인 테스트" required>
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="synthetic-url">시작 URL</label>
+                <input type="url" class="form-input" id="synthetic-url" placeholder="https://example.com/login" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="synthetic-timeout">타임아웃 (ms)</label>
+                <input type="number" class="form-input" id="synthetic-timeout" min="5000" max="120000" value="30000">
+              </div>
+            </div>
+
+            <!-- 스텝 목록 -->
+            <div class="synthetic-steps" id="synthetic-steps">
+              <div class="synthetic-steps-header">
+                <h4>시나리오 스텝</h4>
+                <button type="button" class="btn btn-secondary btn-sm" id="add-step-btn">+ 스텝 추가</button>
+              </div>
+              <div class="synthetic-steps-list" id="steps-list">
+                <!-- 기본 1개 스텝 -->
+                <div class="synthetic-step-row" data-step="1">
+                  <span class="step-number">1</span>
+                  <select class="form-input step-action">
+                    <option value="click">클릭 (click)</option>
+                    <option value="type">입력 (type)</option>
+                    <option value="navigate">이동 (navigate)</option>
+                    <option value="select">선택 (select)</option>
+                    <option value="wait">대기 (wait)</option>
+                    <option value="assert_text">텍스트 확인 (assert_text)</option>
+                    <option value="assert_element">요소 확인 (assert_element)</option>
+                    <option value="assert_url">URL 확인 (assert_url)</option>
+                  </select>
+                  <input type="text" class="form-input step-selector" placeholder="CSS 선택자 (예: #login-btn)">
+                  <input type="text" class="form-input step-value" placeholder="값 (URL, 텍스트, ms 등)">
+                  <input type="text" class="form-input step-desc" placeholder="설명 (선택)" style="flex: 1;">
+                  <button type="button" class="btn btn-danger btn-sm remove-step-btn">X</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 프리셋 버튼 -->
+            <div class="synthetic-presets" style="margin-top: 12px;">
+              <span style="font-size: 12px; color: var(--text-tertiary); margin-right: 8px;">프리셋:</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="loadPreset('login')">로그인 시나리오</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="loadPreset('search')">검색 시나리오</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 16px;">
+              <span class="btn-text">시나리오 실행</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="synthetic-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- SLA 리포트 -->
+      <div class="tab-content" id="tab-sla">
+        <div class="tool-card">
+          <h3 class="tool-title">Uptime SLA 리포트</h3>
+          <p class="tool-description">프로젝트의 가용성을 분석하고 SLA 준수 여부를 확인합니다.</p>
+
+          <form id="sla-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="sla-project">프로젝트</label>
+                <select class="form-input" id="sla-project" required>
+                  <option value="">프로젝트를 선택하세요</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="sla-days">기간 (일)</label>
+                <select class="form-input" id="sla-days">
+                  <option value="7">최근 7일</option>
+                  <option value="30" selected>최근 30일</option>
+                  <option value="90">최근 90일</option>
+                  <option value="180">최근 180일</option>
+                  <option value="365">최근 365일</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" for="sla-target">SLA 목표 (%)</label>
+                <select class="form-input" id="sla-target">
+                  <option value="99.99">99.99%</option>
+                  <option value="99.9" selected>99.9%</option>
+                  <option value="99.5">99.5%</option>
+                  <option value="99">99%</option>
+                  <option value="95">95%</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">리포트 생성</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="sla-result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- 이상 탐지 -->
+      <div class="tab-content" id="tab-anomaly">
+        <div class="tool-card">
+          <h3 class="tool-title">이상 탐지</h3>
+          <p class="tool-description">기준 기간과 비교하여 응답시간, 가용성, 에러율의 이상 징후를 감지합니다. Z-score 기반 통계적 분석을 사용합니다.</p>
+
+          <form id="anomaly-form" class="tool-form">
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" for="anomaly-project">프로젝트</label>
+                <select class="form-input" id="anomaly-project" required>
+                  <option value="">프로젝트를 선택하세요</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="anomaly-analysis-hours">분석 기간 (시간)</label>
+                <select class="form-input" id="anomaly-analysis-hours">
+                  <option value="1" selected>최근 1시간</option>
+                  <option value="3">최근 3시간</option>
+                  <option value="6">최근 6시간</option>
+                  <option value="12">최근 12시간</option>
+                  <option value="24">최근 24시간</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="anomaly-baseline-hours">기준선 기간</label>
+                <select class="form-input" id="anomaly-baseline-hours">
+                  <option value="24">1일</option>
+                  <option value="72">3일</option>
+                  <option value="168" selected>7일</option>
+                  <option value="336">14일</option>
+                  <option value="720">30일</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="anomaly-sensitivity">민감도</label>
+                <select class="form-input" id="anomaly-sensitivity">
+                  <option value="1.5">높음 (1.5)</option>
+                  <option value="2.0" selected>보통 (2.0)</option>
+                  <option value="3.0">낮음 (3.0)</option>
+                </select>
+                <span class="form-hint">낮을수록 민감하게 탐지</span>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <span class="btn-text">분석 실행</span>
+              <span class="btn-loading" style="display: none;"><span class="loading-spinner-sm"></span></span>
+            </button>
+          </form>
+
+          <div class="tool-result" id="anomaly-result" style="display: none;"></div>
+        </div>
+      </div>
+
       <!-- 로그 정리 -->
       <div class="tab-content" id="tab-cleanup">
         <div class="tool-card">
@@ -226,6 +497,12 @@
       // TCP 포트 체크
       document.getElementById('tcp-form').addEventListener('submit', handleTcpCheck);
 
+      // UDP 포트 체크
+      document.getElementById('udp-form').addEventListener('submit', handleUdpCheck);
+
+      // API 엔드포인트 체크
+      document.getElementById('api-form').addEventListener('submit', handleApiCheck);
+
       // DNS 조회
       document.getElementById('dns-form').addEventListener('submit', handleDnsLookup);
 
@@ -235,12 +512,29 @@
       // 보안 헤더 체크
       document.getElementById('security-form').addEventListener('submit', handleSecurityCheck);
 
+      // Synthetic 모니터링
+      document.getElementById('synthetic-form').addEventListener('submit', handleSyntheticTest);
+      document.getElementById('add-step-btn').addEventListener('click', addSyntheticStep);
+      document.getElementById('steps-list').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-step-btn')) {
+          e.target.closest('.synthetic-step-row').remove();
+          renumberSteps();
+        }
+      });
+
+      // SLA 리포트
+      document.getElementById('sla-form').addEventListener('submit', handleSlaReport);
+
+      // 이상 탐지
+      document.getElementById('anomaly-form').addEventListener('submit', handleAnomalyDetection);
+
       // 로그 정리
       document.getElementById('refresh-stats-btn').addEventListener('click', loadCleanupStats);
       document.getElementById('cleanup-all-btn').addEventListener('click', handleCleanupAll);
 
-      // 초기 통계 로드
+      // 초기 데이터 로드
       loadCleanupStats();
+      loadProjectList();
     }
 
     // TCP 포트 체크
@@ -269,6 +563,163 @@
             ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
             <div class="result-row"><span>체크 시간</span><span>${formatDateTime(result.checked_at)}</span></div>
           </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // UDP 포트 체크
+    async function handleUdpCheck(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('udp-result');
+
+      setLoading(btn, true);
+
+      try {
+        const result = await monitoring.checkUDPPort(
+          document.getElementById('udp-host').value,
+          parseInt(document.getElementById('udp-port').value),
+          parseInt(document.getElementById('udp-timeout').value)
+        );
+
+        const statusText = result.is_open
+          ? (result.is_filtered ? 'open|filtered' : '열림')
+          : '닫힘';
+        const statusClass = result.is_open ? 'result-success' : 'result-error';
+        const statusIcon = result.is_open ? (result.is_filtered ? '?' : '✓') : '✗';
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${statusClass}">
+            <span class="result-icon">${statusIcon}</span>
+            <span class="result-title">${result.host}:${result.port} (UDP)</span>
+            <span class="result-status">${statusText}</span>
+          </div>
+          <div class="result-details">
+            ${result.response_time ? `<div class="result-row"><span>응답 시간</span><span>${Math.round(result.response_time * 1000)}ms</span></div>` : ''}
+            ${result.is_filtered ? '<div class="result-row"><span>참고</span><span>UDP는 응답 없음 시 open|filtered로 표시됩니다</span></div>' : ''}
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>상태</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+            <div class="result-row"><span>체크 시간</span><span>${formatDateTime(result.checked_at)}</span></div>
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // API 엔드포인트 체크
+    async function handleApiCheck(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('api-result');
+
+      setLoading(btn, true);
+
+      try {
+        // 파라미터 구성
+        const params = {
+          url: document.getElementById('api-url').value,
+          method: document.getElementById('api-method').value,
+          timeout: parseInt(document.getElementById('api-timeout').value),
+        };
+
+        // 커스텀 헤더 파싱
+        const headersText = document.getElementById('api-headers').value.trim();
+        if (headersText) {
+          try {
+            params.headers = JSON.parse(headersText);
+          } catch {
+            showToast('헤더 JSON 형식이 올바르지 않습니다.', 'error');
+            setLoading(btn, false);
+            return;
+          }
+        }
+
+        // 요청 바디
+        const bodyText = document.getElementById('api-body').value.trim();
+        if (bodyText) {
+          params.body = bodyText;
+        }
+
+        // 기대 상태 코드
+        const expectedStatus = document.getElementById('api-expected-status').value;
+        if (expectedStatus) {
+          params.expected_status = parseInt(expectedStatus);
+        }
+
+        // JSON 경로/값 검증
+        const jsonPath = document.getElementById('api-json-path').value.trim();
+        const jsonValue = document.getElementById('api-json-value').value.trim();
+        if (jsonPath) {
+          params.expected_json_path = jsonPath;
+          params.expected_json_value = jsonValue;
+        }
+
+        const result = await monitoring.checkAPIEndpoint(params);
+
+        // 검증 결과 HTML 구성
+        let validationsHtml = '';
+        if (result.validations && result.validations.length > 0) {
+          validationsHtml = `
+            <div class="api-validations">
+              <h4 style="margin: 12px 0 8px;">검증 결과</h4>
+              ${result.validations.map(v => `
+                <div class="result-row ${v.passed ? '' : 'result-error-msg'}">
+                  <span>${v.passed ? '✓' : '✗'} ${escapeHtml(v.field)}</span>
+                  <span>기대: ${escapeHtml(v.expected)} / 실제: ${escapeHtml(v.actual)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        // 응답 바디 HTML (JSON 포맷팅)
+        let responseBodyHtml = '';
+        if (result.response_body) {
+          let formattedBody = escapeHtml(result.response_body);
+          if (result.is_json) {
+            try {
+              formattedBody = escapeHtml(JSON.stringify(JSON.parse(result.response_body), null, 2));
+            } catch { /* 파싱 실패 시 원본 사용 */ }
+          }
+          responseBodyHtml = `
+            <div class="api-response-body">
+              <h4 style="margin: 12px 0 8px;">응답 본문</h4>
+              <pre style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 12px; max-height: 300px; overflow-y: auto;">${formattedBody}</pre>
+            </div>
+          `;
+        }
+
+        const hasError = result.error_message;
+        const isSuccess = !hasError && result.all_passed;
+        const statusClass = hasError ? 'result-error' : (isSuccess ? 'result-success' : 'result-warning');
+        const statusIcon = hasError ? '✗' : (isSuccess ? '✓' : '!');
+        const statusText = hasError ? '오류' : (isSuccess ? '성공' : '일부 실패');
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${statusClass}">
+            <span class="result-icon">${statusIcon}</span>
+            <span class="result-title">${result.method} ${escapeHtml(result.url)}</span>
+            <span class="result-status">${statusText}</span>
+          </div>
+          <div class="result-details">
+            ${result.status_code ? `<div class="result-row"><span>HTTP 상태</span><span>${result.status_code}</span></div>` : ''}
+            ${result.response_time ? `<div class="result-row"><span>응답 시간</span><span>${result.response_time}ms</span></div>` : ''}
+            ${result.content_type ? `<div class="result-row"><span>Content-Type</span><span>${escapeHtml(result.content_type)}</span></div>` : ''}
+            <div class="result-row"><span>JSON 응답</span><span>${result.is_json ? '예' : '아니오'}</span></div>
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+          </div>
+          ${validationsHtml}
+          ${responseBodyHtml}
         `;
         resultDiv.style.display = 'block';
 
@@ -409,6 +860,502 @@
             ${headersHtml}
           </div>
           ${result.error_message ? `<div class="result-error-msg">${escapeHtml(result.error_message)}</div>` : ''}
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // Synthetic 스텝 추가
+    let stepCounter = 1;
+    function addSyntheticStep() {
+      stepCounter++;
+      const list = document.getElementById('steps-list');
+      const row = document.createElement('div');
+      row.className = 'synthetic-step-row';
+      row.dataset.step = stepCounter;
+      row.innerHTML = `
+        <span class="step-number">${stepCounter}</span>
+        <select class="form-input step-action">
+          <option value="click">클릭 (click)</option>
+          <option value="type">입력 (type)</option>
+          <option value="navigate">이동 (navigate)</option>
+          <option value="select">선택 (select)</option>
+          <option value="wait">대기 (wait)</option>
+          <option value="assert_text">텍스트 확인 (assert_text)</option>
+          <option value="assert_element">요소 확인 (assert_element)</option>
+          <option value="assert_url">URL 확인 (assert_url)</option>
+        </select>
+        <input type="text" class="form-input step-selector" placeholder="CSS 선택자">
+        <input type="text" class="form-input step-value" placeholder="값">
+        <input type="text" class="form-input step-desc" placeholder="설명 (선택)" style="flex: 1;">
+        <button type="button" class="btn btn-danger btn-sm remove-step-btn">X</button>
+      `;
+      list.appendChild(row);
+    }
+
+    function renumberSteps() {
+      const rows = document.querySelectorAll('.synthetic-step-row');
+      rows.forEach((row, i) => {
+        row.querySelector('.step-number').textContent = i + 1;
+        row.dataset.step = i + 1;
+      });
+      stepCounter = rows.length;
+    }
+
+    // 프리셋 로드
+    function loadPreset(type) {
+      const list = document.getElementById('steps-list');
+
+      if (type === 'login') {
+        document.getElementById('synthetic-name').value = '로그인 시나리오';
+        list.innerHTML = '';
+        stepCounter = 0;
+
+        const loginSteps = [
+          { action: 'type', selector: '#email, input[type="email"]', value: 'test@example.com', desc: '이메일 입력' },
+          { action: 'type', selector: '#password, input[type="password"]', value: 'password123', desc: '비밀번호 입력' },
+          { action: 'click', selector: 'button[type="submit"]', value: '', desc: '로그인 버튼 클릭' },
+          { action: 'wait', selector: '', value: '2000', desc: '페이지 로드 대기' },
+          { action: 'assert_text', selector: '', value: '대시보드', desc: '로그인 성공 확인' },
+        ];
+
+        loginSteps.forEach(step => {
+          stepCounter++;
+          const row = document.createElement('div');
+          row.className = 'synthetic-step-row';
+          row.dataset.step = stepCounter;
+          row.innerHTML = `
+            <span class="step-number">${stepCounter}</span>
+            <select class="form-input step-action">
+              <option value="click" ${step.action === 'click' ? 'selected' : ''}>클릭 (click)</option>
+              <option value="type" ${step.action === 'type' ? 'selected' : ''}>입력 (type)</option>
+              <option value="navigate" ${step.action === 'navigate' ? 'selected' : ''}>이동 (navigate)</option>
+              <option value="select" ${step.action === 'select' ? 'selected' : ''}>선택 (select)</option>
+              <option value="wait" ${step.action === 'wait' ? 'selected' : ''}>대기 (wait)</option>
+              <option value="assert_text" ${step.action === 'assert_text' ? 'selected' : ''}>텍스트 확인 (assert_text)</option>
+              <option value="assert_element" ${step.action === 'assert_element' ? 'selected' : ''}>요소 확인 (assert_element)</option>
+              <option value="assert_url" ${step.action === 'assert_url' ? 'selected' : ''}>URL 확인 (assert_url)</option>
+            </select>
+            <input type="text" class="form-input step-selector" placeholder="CSS 선택자" value="${escapeHtml(step.selector)}">
+            <input type="text" class="form-input step-value" placeholder="값" value="${escapeHtml(step.value)}">
+            <input type="text" class="form-input step-desc" placeholder="설명" value="${escapeHtml(step.desc)}" style="flex: 1;">
+            <button type="button" class="btn btn-danger btn-sm remove-step-btn">X</button>
+          `;
+          list.appendChild(row);
+        });
+      } else if (type === 'search') {
+        document.getElementById('synthetic-name').value = '검색 시나리오';
+        list.innerHTML = '';
+        stepCounter = 0;
+
+        const searchSteps = [
+          { action: 'type', selector: 'input[type="search"], input[name="q"], #search', value: '테스트 검색어', desc: '검색어 입력' },
+          { action: 'click', selector: 'button[type="submit"], .search-btn', value: '', desc: '검색 버튼 클릭' },
+          { action: 'wait', selector: '', value: '2000', desc: '검색 결과 대기' },
+          { action: 'assert_element', selector: '.search-results, .result-list', value: '', desc: '검색 결과 영역 확인' },
+        ];
+
+        searchSteps.forEach(step => {
+          stepCounter++;
+          const row = document.createElement('div');
+          row.className = 'synthetic-step-row';
+          row.dataset.step = stepCounter;
+          row.innerHTML = `
+            <span class="step-number">${stepCounter}</span>
+            <select class="form-input step-action">
+              <option value="click" ${step.action === 'click' ? 'selected' : ''}>클릭 (click)</option>
+              <option value="type" ${step.action === 'type' ? 'selected' : ''}>입력 (type)</option>
+              <option value="navigate" ${step.action === 'navigate' ? 'selected' : ''}>이동 (navigate)</option>
+              <option value="select" ${step.action === 'select' ? 'selected' : ''}>선택 (select)</option>
+              <option value="wait" ${step.action === 'wait' ? 'selected' : ''}>대기 (wait)</option>
+              <option value="assert_text" ${step.action === 'assert_text' ? 'selected' : ''}>텍스트 확인 (assert_text)</option>
+              <option value="assert_element" ${step.action === 'assert_element' ? 'selected' : ''}>요소 확인 (assert_element)</option>
+              <option value="assert_url" ${step.action === 'assert_url' ? 'selected' : ''}>URL 확인 (assert_url)</option>
+            </select>
+            <input type="text" class="form-input step-selector" placeholder="CSS 선택자" value="${escapeHtml(step.selector)}">
+            <input type="text" class="form-input step-value" placeholder="값" value="${escapeHtml(step.value)}">
+            <input type="text" class="form-input step-desc" placeholder="설명" value="${escapeHtml(step.desc)}" style="flex: 1;">
+            <button type="button" class="btn btn-danger btn-sm remove-step-btn">X</button>
+          `;
+          list.appendChild(row);
+        });
+      }
+    }
+
+    // Synthetic 테스트 실행
+    async function handleSyntheticTest(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('synthetic-result');
+
+      // 스텝 수집
+      const stepRows = document.querySelectorAll('.synthetic-step-row');
+      if (stepRows.length === 0) {
+        showToast('최소 1개의 스텝을 추가하세요.', 'error');
+        return;
+      }
+
+      const steps = [];
+      for (const row of stepRows) {
+        const action = row.querySelector('.step-action').value;
+        const selector = row.querySelector('.step-selector').value.trim();
+        const value = row.querySelector('.step-value').value.trim();
+        const description = row.querySelector('.step-desc').value.trim();
+
+        // 필수값 검증
+        if (['click', 'type', 'select', 'assert_element'].includes(action) && !selector) {
+          showToast(`스텝 ${row.dataset.step}: CSS 선택자가 필요합니다.`, 'error');
+          return;
+        }
+        if (['navigate', 'assert_text', 'assert_url'].includes(action) && !value) {
+          showToast(`스텝 ${row.dataset.step}: 값이 필요합니다.`, 'error');
+          return;
+        }
+
+        steps.push({
+          action,
+          selector: selector || null,
+          value: value || null,
+          description: description || null,
+        });
+      }
+
+      setLoading(btn, true);
+
+      try {
+        const response = await fetch('/api/v1/monitoring/check/synthetic', {
+          method: 'POST',
+          headers: auth.getAuthHeaders(),
+          body: JSON.stringify({
+            name: document.getElementById('synthetic-name').value,
+            start_url: document.getElementById('synthetic-url').value,
+            steps: steps,
+            timeout: parseInt(document.getElementById('synthetic-timeout').value),
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Synthetic 테스트 실행 실패');
+        }
+
+        const result = await response.json();
+
+        const isSuccess = result.all_passed;
+        const statusClass = isSuccess ? 'result-success' : 'result-error';
+        const statusIcon = isSuccess ? '✓' : '✗';
+        const statusText = isSuccess ? '전체 통과' : `${result.failed_steps}개 실패`;
+
+        // 스텝 결과 HTML
+        const stepsHtml = result.step_results.map(s => {
+          const stepClass = s.passed ? 'synthetic-step-pass' : 'synthetic-step-fail';
+          const stepIcon = s.passed ? '✓' : '✗';
+          return `
+            <div class="synthetic-result-step ${stepClass}">
+              <span class="step-result-icon">${stepIcon}</span>
+              <span class="step-result-num">#${s.step_number}</span>
+              <span class="step-result-action">${s.action}</span>
+              <span class="step-result-desc">${escapeHtml(s.description || '')}</span>
+              <span class="step-result-time">${s.duration_ms ? s.duration_ms + 'ms' : '-'}</span>
+              ${s.error_message ? `<div class="step-result-error">${escapeHtml(s.error_message)}</div>` : ''}
+            </div>
+          `;
+        }).join('');
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${statusClass}">
+            <span class="result-icon">${statusIcon}</span>
+            <span class="result-title">${escapeHtml(result.name)}</span>
+            <span class="result-status">${statusText}</span>
+          </div>
+          <div class="result-details">
+            <div class="result-row"><span>총 스텝</span><span>${result.total_steps}</span></div>
+            <div class="result-row"><span>통과 / 실패</span><span>${result.passed_steps} / ${result.failed_steps}</span></div>
+            <div class="result-row"><span>총 실행 시간</span><span>${result.total_duration_ms}ms</span></div>
+            ${result.error_message ? `<div class="result-row result-error-msg"><span>오류</span><span>${escapeHtml(result.error_message)}</span></div>` : ''}
+          </div>
+          <div class="synthetic-results-list">
+            <h4 style="margin: 16px 0 8px;">스텝 실행 결과</h4>
+            ${stepsHtml}
+          </div>
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    // 프로젝트 목록 로드 (SLA 리포트용)
+    // 이상 탐지 실행
+    async function handleAnomalyDetection(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('anomaly-result');
+
+      const projectId = document.getElementById('anomaly-project').value;
+      if (!projectId) {
+        showToast('프로젝트를 선택하세요.', 'error');
+        return;
+      }
+
+      setLoading(btn, true);
+
+      try {
+        const analysisHours = document.getElementById('anomaly-analysis-hours').value;
+        const baselineHours = document.getElementById('anomaly-baseline-hours').value;
+        const sensitivity = document.getElementById('anomaly-sensitivity').value;
+
+        const response = await fetch(
+          `/api/v1/monitoring/reports/anomaly/${projectId}?analysis_hours=${analysisHours}&baseline_hours=${baselineHours}&sensitivity=${sensitivity}`,
+          { headers: auth.getAuthHeaders() }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || '이상 탐지 실패');
+        }
+
+        const result = await response.json();
+
+        // 상태 결정
+        const hasAnomalies = result.total_anomalies > 0;
+        const hasCritical = result.critical_count > 0;
+        const statusClass = hasCritical ? 'result-error' : (hasAnomalies ? 'result-warning' : 'result-success');
+        const statusIcon = hasCritical ? '!' : (hasAnomalies ? '!' : '✓');
+        const statusText = hasCritical ? `위험 ${result.critical_count}건`
+          : (hasAnomalies ? `경고 ${result.warning_count}건` : '정상');
+
+        // 이상 목록 HTML
+        let anomaliesHtml = '';
+        if (result.anomalies && result.anomalies.length > 0) {
+          anomaliesHtml = `
+            <div class="anomaly-list">
+              <h4 style="margin: 16px 0 8px;">탐지된 이상 (${result.total_anomalies}건)</h4>
+              ${result.anomalies.map(a => {
+                const sevClass = a.severity === 'critical' ? 'anomaly-critical'
+                  : a.severity === 'warning' ? 'anomaly-warning' : 'anomaly-info';
+                const sevLabel = a.severity === 'critical' ? '위험'
+                  : a.severity === 'warning' ? '경고' : '정보';
+                return `
+                  <div class="anomaly-item ${sevClass}">
+                    <span class="anomaly-severity">${sevLabel}</span>
+                    <span class="anomaly-type">${escapeHtml(a.type)}</span>
+                    <span class="anomaly-message">${escapeHtml(a.message)}</span>
+                    <span class="anomaly-deviation">${a.deviation_percent > 0 ? '+' : ''}${a.deviation_percent}%</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }
+
+        // 기준선 vs 현재 비교 표
+        const b = result.baseline_stats;
+        const c = result.current_stats;
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${statusClass}">
+            <span class="result-icon">${statusIcon}</span>
+            <span class="result-title">${escapeHtml(result.project_title)} 이상 탐지</span>
+            <span class="result-status">${statusText}</span>
+          </div>
+
+          <div class="anomaly-comparison">
+            <div class="anomaly-compare-cards">
+              <div class="anomaly-compare-card">
+                <h4>기준선 (${result.baseline_period_hours}시간)</h4>
+                <div class="compare-row"><span>체크 수</span><span>${b.total_checks}</span></div>
+                <div class="compare-row"><span>가용률</span><span>${b.availability_pct}%</span></div>
+                <div class="compare-row"><span>평균 응답시간</span><span>${b.avg_response_time_ms}ms</span></div>
+                <div class="compare-row"><span>표준편차</span><span>${b.std_response_time_ms}ms</span></div>
+                <div class="compare-row"><span>에러율</span><span>${b.error_rate_pct}%</span></div>
+              </div>
+              <div class="anomaly-compare-card">
+                <h4>분석 기간 (${result.analysis_period_hours}시간)</h4>
+                <div class="compare-row"><span>체크 수</span><span>${c.total_checks}</span></div>
+                <div class="compare-row"><span>가용률</span><span>${c.availability_pct}%</span></div>
+                <div class="compare-row"><span>평균 응답시간</span><span>${c.avg_response_time_ms}ms</span></div>
+                <div class="compare-row"><span>에러율</span><span>${c.error_rate_pct}%</span></div>
+              </div>
+            </div>
+          </div>
+
+          ${anomaliesHtml}
+        `;
+        resultDiv.style.display = 'block';
+
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    }
+
+    async function loadProjectList() {
+      try {
+        const response = await fetch('/api/v1/projects/', {
+          headers: auth.getAuthHeaders()
+        });
+        if (!response.ok) return;
+
+        const projects = await response.json();
+        const selects = [
+          document.getElementById('sla-project'),
+          document.getElementById('anomaly-project'),
+        ];
+
+        projects.forEach(p => {
+          selects.forEach(select => {
+            if (select) {
+              const option = document.createElement('option');
+              option.value = p.id;
+              option.textContent = `${p.title} (${p.url})`;
+              select.appendChild(option);
+            }
+          });
+        });
+      } catch (error) {
+        console.error('프로젝트 목록 로드 오류:', error);
+      }
+    }
+
+    // SLA 리포트 생성
+    async function handleSlaReport(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      const resultDiv = document.getElementById('sla-result');
+
+      const projectId = document.getElementById('sla-project').value;
+      if (!projectId) {
+        showToast('프로젝트를 선택하세요.', 'error');
+        return;
+      }
+
+      setLoading(btn, true);
+
+      try {
+        const days = document.getElementById('sla-days').value;
+        const target = document.getElementById('sla-target').value;
+
+        const response = await fetch(
+          `/api/v1/monitoring/reports/sla/${projectId}?days=${days}&target_uptime=${target}`,
+          { headers: auth.getAuthHeaders() }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'SLA 리포트 생성 실패');
+        }
+
+        const report = await response.json();
+        const m = report.metrics;
+
+        // SLA 충족 여부에 따른 스타일
+        const slaClass = m.sla_met ? 'result-success' : 'result-error';
+        const slaIcon = m.sla_met ? '✓' : '✗';
+        const slaText = m.sla_met ? 'SLA 충족' : 'SLA 미충족';
+
+        // 가용률 색상
+        const uptimeClass = m.achieved_uptime >= 99.9 ? 'score-good'
+          : m.achieved_uptime >= 99 ? 'score-warning' : 'score-bad';
+
+        // 일별 분석 바 차트 (텍스트 기반)
+        let dailyHtml = '';
+        if (report.daily_breakdown && report.daily_breakdown.length > 0) {
+          dailyHtml = `
+            <div class="sla-daily-breakdown">
+              <h4 style="margin: 16px 0 8px;">일별 가용성</h4>
+              <div class="sla-daily-grid">
+                ${report.daily_breakdown.map(d => {
+                  const barColor = d.uptime_percentage >= 99.9 ? 'var(--success)'
+                    : d.uptime_percentage >= 99 ? 'var(--warning)' : 'var(--error)';
+                  const barWidth = d.total_checks > 0 ? d.uptime_percentage : 100;
+                  return `
+                    <div class="sla-daily-row">
+                      <span class="sla-daily-date">${d.date.slice(5)}</span>
+                      <div class="sla-daily-bar-bg">
+                        <div class="sla-daily-bar" style="width: ${barWidth}%; background: ${barColor};"></div>
+                      </div>
+                      <span class="sla-daily-pct">${d.total_checks > 0 ? d.uptime_percentage + '%' : '-'}</span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        // 인시던트 목록
+        let incidentsHtml = '';
+        if (report.incidents && report.incidents.length > 0) {
+          incidentsHtml = `
+            <div class="sla-incidents">
+              <h4 style="margin: 16px 0 8px;">장애 인시던트 (${report.incidents.length}건)</h4>
+              ${report.incidents.map(inc => `
+                <div class="result-row result-error-msg">
+                  <span>${formatDateTime(inc.started_at)} ~ ${inc.ended_at ? formatDateTime(inc.ended_at) : '진행 중'}</span>
+                  <span>${inc.duration_minutes}분 ${inc.error_message ? '/ ' + escapeHtml(inc.error_message) : ''}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          incidentsHtml = `
+            <div class="sla-incidents">
+              <h4 style="margin: 16px 0 8px;">장애 인시던트</h4>
+              <div class="result-row"><span>기간 내 장애가 없습니다.</span></div>
+            </div>
+          `;
+        }
+
+        resultDiv.innerHTML = `
+          <div class="result-header ${slaClass}">
+            <span class="result-icon">${slaIcon}</span>
+            <span class="result-title">${escapeHtml(report.project_title)} SLA 리포트</span>
+            <span class="result-status">${slaText}</span>
+          </div>
+
+          <div class="sla-summary">
+            <div class="sla-metric-cards">
+              <div class="sla-metric-card">
+                <div class="sla-metric-label">달성 가용률</div>
+                <div class="sla-metric-value ${uptimeClass}">${m.achieved_uptime}%</div>
+                <div class="sla-metric-sub">목표: ${m.target_uptime}%</div>
+              </div>
+              <div class="sla-metric-card">
+                <div class="sla-metric-label">총 다운타임</div>
+                <div class="sla-metric-value">${m.total_downtime_minutes}분</div>
+                <div class="sla-metric-sub">허용: ${m.allowed_downtime_minutes}분</div>
+              </div>
+              <div class="sla-metric-card">
+                <div class="sla-metric-label">장애 횟수</div>
+                <div class="sla-metric-value">${m.incidents_count}건</div>
+                <div class="sla-metric-sub">${m.failed_checks} / ${m.total_checks} 체크 실패</div>
+              </div>
+              <div class="sla-metric-card">
+                <div class="sla-metric-label">평균 응답시간</div>
+                <div class="sla-metric-value">${m.avg_response_time ? m.avg_response_time + 'ms' : '-'}</div>
+                <div class="sla-metric-sub">P95: ${m.p95_response_time ? m.p95_response_time + 'ms' : '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="result-details">
+            <div class="result-row"><span>기간</span><span>${report.period_days}일 (${formatDateTime(report.period_start)} ~ ${formatDateTime(report.period_end)})</span></div>
+            <div class="result-row"><span>최소 응답시간</span><span>${m.min_response_time ? m.min_response_time + 'ms' : '-'}</span></div>
+            <div class="result-row"><span>최대 응답시간</span><span>${m.max_response_time ? m.max_response_time + 'ms' : '-'}</span></div>
+          </div>
+
+          ${dailyHtml}
+          ${incidentsHtml}
         `;
         resultDiv.style.display = 'block';
 

@@ -53,15 +53,46 @@
 
 | # | 기능 | 상태 | 난이도 | 비고 |
 |---|------|------|--------|------|
-| 6.1 | API 엔드포인트 체크 | 대기 | 중간 | JSON 응답 검증 |
-| 6.2 | Synthetic 모니터링 | 대기 | 어려움 | 로그인→결제 등 사용자 시나리오 |
-| 6.3 | Uptime SLA 리포트 | 대기 | 중간 | 99.9% 가용성 보고서 |
-| 6.4 | 이상 탐지 | 대기 | 어려움 | 평소와 다른 패턴 감지 |
-| 6.5 | TCP/UDP 포트 체크 | 대기 | 쉬움 | DB, Redis 등 포트 모니터링 |
+| 6.1 | API 엔드포인트 체크 | 완료 | 중간 | JSON 응답 검증, dot-notation 경로 |
+| 6.2 | Synthetic 모니터링 | 완료 | 어려움 | Playwright 시나리오 실행, 프리셋 제공 |
+| 6.3 | Uptime SLA 리포트 | 완료 | 중간 | 가용성 보고서, 일별 분석, 인시던트 탐지 |
+| 6.4 | 이상 탐지 | 완료 | 어려움 | Z-score 기반 통계적 이상 탐지 |
+| 6.5 | TCP/UDP 포트 체크 | 완료 | 쉬움 | DB, Redis 등 포트 모니터링 |
 
 ---
 
 ## 작업 로그
+
+### 2026-02-05
+
+- 6.5 TCP/UDP 포트 체크 구현 완료
+  - UDP 포트 체크 스키마, 서비스, API 엔드포인트 추가
+  - tools.html에 UDP 탭 추가
+  - open|filtered 상태 구분 지원
+- 6.1 API 엔드포인트 체크 구현 완료
+  - HTTP 메서드, 커스텀 헤더, 바디 지정 가능
+  - 상태 코드 검증, JSON 응답 경로/값 검증 (dot-notation)
+  - tools.html에 API 체크 탭 추가
+  - monitoring.js에 checkAPIEndpoint 메서드 추가
+- 6.2 Synthetic 모니터링 구현 완료
+  - PlaywrightMonitorService에 run_synthetic_test 메서드 추가
+  - 9가지 액션 지원 (navigate, click, type, select, wait, assert_text/element/url, screenshot)
+  - `/check/synthetic` POST 엔드포인트 추가
+  - tools.html에 Synthetic 탭 추가 (스텝 편집기, 프리셋)
+  - 로그인/검색 시나리오 프리셋 제공
+- 6.4 이상 탐지 구현 완료
+  - `/reports/anomaly/{project_id}` API 엔드포인트 추가
+  - Z-score 기반 통계적 이상 탐지 (응답시간, 가용성, 에러율)
+  - 5가지 이상 유형: 응답시간 급증, 가용성 하락, 에러율 증가, 패턴 변화, 모니터링 중단
+  - 기준선 기간 vs 분석 기간 비교 분석
+  - 민감도 조절 가능 (Z-score 임계값)
+  - tools.html에 이상 탐지 탭 추가
+- 6.3 Uptime SLA 리포트 구현 완료
+  - `/reports/sla/{project_id}` API 엔드포인트 추가
+  - SLA 목표 대비 달성률, 다운타임, P95 응답시간 계산
+  - 일별 가용성 분석 (바 차트)
+  - 연속 실패 기반 인시던트 자동 탐지
+  - tools.html에 SLA 리포트 탭 추가
 
 ### 2026-01-28
 

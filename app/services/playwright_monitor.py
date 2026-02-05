@@ -9,8 +9,9 @@ HTTP 상태 코드만으로는 감지할 수 없는 문제들을 체크:
 """
 
 import json
+import logging
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -18,6 +19,12 @@ from sqlalchemy.orm import Session
 
 from app.models.monitoring import MonitoringLog
 from app.models.project import Project
+from app.schemas.monitoring import (
+    SyntheticStepResult,
+    SyntheticTestResponse,
+)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -203,9 +210,11 @@ class PlaywrightMonitorService:
 
                     # DOM 상태 확인 (body 존재 여부)
                     try:
-                        body_exists = await page.evaluate('() => document.body !== null && document.body.innerHTML.length > 0')
+                        body_exists = await page.evaluate(
+                            '() => document.body !== null && document.body.innerHTML.length > 0'
+                        )
                         metrics.is_dom_ready = body_exists
-                    except:
+                    except Exception:
                         metrics.is_dom_ready = False
 
                     # JavaScript 에러 정리
@@ -290,6 +299,203 @@ class PlaywrightMonitorService:
         )
         self.db.add(log)
         self.db.commit()
+
+    async def run_synthetic_test(
+        self,
+        name: str,
+        start_url: str,
+        steps: list,
+        timeout: int = 30000,
+        viewport_width: int = 1280,
+        viewport_height: int = 800,
+    ) -> SyntheticTestResponse:
+        """Synthetic 시나리오 테스트 실행
+
+        사용자가 정의한 시나리오(스텝 목록)를 Playwright로 순차 실행합니다.
+        각 스텝은 navigate, click, type, select, wait, assert 등의 액션을 수행합니다.
+        """
+        step_results = []
+        total_start = time.time()
+
+        try:
+            from playwright.async_api import async_playwright
+
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-setuid-sandbox"]
+                )
+                context = await browser.new_context(
+                    viewport={"width": viewport_width, "height": viewport_height},
+                    user_agent=(
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/120.0.0.0 Safari/537.36 PyMonitor/Synthetic"
+                    ),
+                )
+                page = await context.new_page()
+                page.set_default_timeout(timeout)
+
+                # 시작 URL로 이동
+                navigate_start = time.time()
+                try:
+                    await page.goto(start_url, wait_until="domcontentloaded")
+                    step_results.append(SyntheticStepResult(
+                        step_number=0,
+                        action="navigate",
+                        description=f"시작 URL: {start_url}",
+                        passed=True,
+                        duration_ms=round((time.time() - navigate_start) * 1000, 2),
+                        current_url=page.url,
+                    ))
+                except Exception as e:
+                    step_results.append(SyntheticStepResult(
+                        step_number=0,
+                        action="navigate",
+                        description=f"시작 URL: {start_url}",
+                        passed=False,
+                        duration_ms=round((time.time() - navigate_start) * 1000, 2),
+                        error_message=str(e),
+                    ))
+                    await browser.close()
+                    return self._build_response(name, start_url, steps, step_results, total_start)
+
+                # 각 스텝 순차 실행
+                for i, step in enumerate(steps):
+                    step_start = time.time()
+                    step_num = i + 1
+                    action = step.action
+                    selector = step.selector
+                    value = step.value
+                    description = step.description or f"Step {step_num}: {action}"
+
+                    try:
+                        if action == "navigate":
+                            await page.goto(value, wait_until="domcontentloaded")
+
+                        elif action == "click":
+                            await page.click(selector)
+                            # 클릭 후 네비게이션 대기 (짧게)
+                            try:
+                                await page.wait_for_load_state("domcontentloaded", timeout=5000)
+                            except Exception:
+                                pass  # 페이지 전환이 아닌 클릭도 있음
+
+                        elif action == "type":
+                            await page.fill(selector, value or "")
+
+                        elif action == "select":
+                            await page.select_option(selector, value)
+
+                        elif action == "wait":
+                            wait_ms = int(value) if value else 1000
+                            await page.wait_for_timeout(wait_ms)
+
+                        elif action == "screenshot":
+                            # 스크린샷은 응답에 경로만 포함 (실제 저장은 생략)
+                            pass
+
+                        elif action == "assert_text":
+                            # 페이지에서 텍스트 존재 확인
+                            content = await page.content()
+                            if value not in content:
+                                raise AssertionError(
+                                    f"텍스트 '{value}'를 찾을 수 없습니다"
+                                )
+
+                        elif action == "assert_element":
+                            # 요소 존재 확인
+                            element = await page.query_selector(selector)
+                            if not element:
+                                raise AssertionError(
+                                    f"요소 '{selector}'를 찾을 수 없습니다"
+                                )
+
+                        elif action == "assert_url":
+                            current_url = page.url
+                            if value not in current_url:
+                                raise AssertionError(
+                                    f"URL에 '{value}'가 포함되지 않습니다 (현재: {current_url})"
+                                )
+
+                        step_results.append(SyntheticStepResult(
+                            step_number=step_num,
+                            action=action,
+                            description=description,
+                            passed=True,
+                            duration_ms=round((time.time() - step_start) * 1000, 2),
+                            current_url=page.url,
+                        ))
+
+                    except Exception as e:
+                        step_results.append(SyntheticStepResult(
+                            step_number=step_num,
+                            action=action,
+                            description=description,
+                            passed=False,
+                            duration_ms=round((time.time() - step_start) * 1000, 2),
+                            error_message=str(e),
+                            current_url=page.url if page else None,
+                        ))
+                        # 스텝 실패 시 이후 스텝은 건너뜀
+                        for j in range(i + 1, len(steps)):
+                            remaining = steps[j]
+                            step_results.append(SyntheticStepResult(
+                                step_number=j + 1,
+                                action=remaining.action,
+                                description=remaining.description or f"Step {j + 1}: {remaining.action}",
+                                passed=False,
+                                error_message="이전 스텝 실패로 건너뜀",
+                            ))
+                        break
+
+                await browser.close()
+
+        except ImportError:
+            return SyntheticTestResponse(
+                name=name,
+                start_url=start_url,
+                total_steps=len(steps) + 1,
+                passed_steps=0,
+                failed_steps=len(steps) + 1,
+                all_passed=False,
+                total_duration_ms=round((time.time() - total_start) * 1000, 2),
+                error_message="Playwright가 설치되지 않았습니다. 'pip install playwright && playwright install' 실행 필요",
+            )
+        except Exception as e:
+            logger.error(f"Synthetic test error: {str(e)}")
+            return SyntheticTestResponse(
+                name=name,
+                start_url=start_url,
+                total_steps=len(steps) + 1,
+                passed_steps=sum(1 for r in step_results if r.passed),
+                failed_steps=len(steps) + 1 - sum(1 for r in step_results if r.passed),
+                all_passed=False,
+                total_duration_ms=round((time.time() - total_start) * 1000, 2),
+                step_results=step_results,
+                error_message=str(e),
+            )
+
+        return self._build_response(name, start_url, steps, step_results, total_start)
+
+    def _build_response(
+        self, name, start_url, steps, step_results, total_start
+    ) -> SyntheticTestResponse:
+        """Synthetic 테스트 결과 응답 구성"""
+        passed = sum(1 for r in step_results if r.passed)
+        total = len(steps) + 1  # 시작 navigate 포함
+        failed = total - passed
+
+        return SyntheticTestResponse(
+            name=name,
+            start_url=start_url,
+            total_steps=total,
+            passed_steps=passed,
+            failed_steps=failed,
+            all_passed=failed == 0,
+            total_duration_ms=round((time.time() - total_start) * 1000, 2),
+            step_results=step_results,
+        )
 
     async def close(self):
         """서비스 종료 (리소스 정리)"""

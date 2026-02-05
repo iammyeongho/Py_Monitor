@@ -159,6 +159,30 @@ const monitoring = {
         }
     },
 
+    // UDP 포트 체크
+    async checkUDPPort(host, port, timeout = 5) {
+        try {
+            const response = await fetch('/api/v1/monitoring/check/udp', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ host, port, timeout }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'UDP 포트 체크에 실패했습니다.');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('UDP 포트 체크 오류:', error);
+            throw error;
+        }
+    },
+
     // DNS 조회
     async checkDNS(domain, recordType = 'A') {
         try {
@@ -203,6 +227,30 @@ const monitoring = {
             return await response.json();
         } catch (error) {
             console.error('콘텐츠 체크 오류:', error);
+            throw error;
+        }
+    },
+
+    // API 엔드포인트 체크
+    async checkAPIEndpoint(params) {
+        try {
+            const response = await fetch('/api/v1/monitoring/check/api', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(params),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || 'API 엔드포인트 체크에 실패했습니다.');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('API 엔드포인트 체크 오류:', error);
             throw error;
         }
     },
