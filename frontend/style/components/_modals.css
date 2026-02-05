@@ -93,8 +93,14 @@
     padding: var(--spacing-lg) var(--spacing-xl);
     border-top: 1px solid var(--border-color);
     display: flex;
+    align-items: center;
     gap: var(--spacing-sm);
     justify-content: flex-end;
+}
+
+/* 삭제 버튼이 있는 경우 왼쪽 배치 */
+.modal-footer .btn-danger:first-child {
+    margin-right: auto;
 }
 
 /* Modal Tabs */

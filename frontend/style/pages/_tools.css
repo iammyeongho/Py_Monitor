@@ -126,7 +126,8 @@
 /* Security Score */
 .security-score {
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    justify-content: center;
     gap: 4px;
     padding: var(--spacing-lg);
     border-radius: var(--radius-lg);
@@ -271,8 +272,10 @@
 }
 
 .synthetic-step-row .form-input {
+    height: 36px;
+    line-height: 36px;
     font-size: var(--font-size-sm);
-    padding: 6px 8px;
+    padding: 0 8px;
 }
 
 .synthetic-step-row select.form-input {
@@ -297,7 +300,7 @@
     flex-wrap: wrap;
 }
 
-.btn-sm {
+.synthetic-presets .btn-sm {
     padding: 4px 10px;
     font-size: var(--font-size-xs);
 }
@@ -655,6 +658,7 @@
 
 .cleanup-actions {
     display: flex;
+    align-items: center;
     gap: var(--spacing-md);
     justify-content: flex-end;
     margin-top: var(--spacing-lg);
