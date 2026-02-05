@@ -85,15 +85,27 @@ services:
       dockerfile: Dockerfile              # Dockerfile 파일명
     container_name: pymonitor-app
     env_file:
-      # .env 파일이 없으면 .env.docker를 복사하세요: cp .env.docker .env
+      # .env 파일이 있으면 로드, 없으면 아래 environment 기본값 사용
       - path: .env
         required: false
     environment:
-      # docker-compose 내부 서비스명으로 연결
-      # 'postgres'는 서비스명 = 컨테이너 호스트명
+      # Docker 내부 서비스명으로 연결
       - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-py_monitor}
       - POSTGRES_PORT=5432
       - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=${SECRET_KEY:-docker-default-secret-key-change-in-production}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-*}
+      # 이메일 (더미 기본값, 필요 시 .env에서 오버라이드)
+      - SMTP_HOST=${SMTP_HOST:-dummy}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-dummy}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-dummy}
+      - SMTP_TLS=${SMTP_TLS:-True}
+      - SMTP_USERNAME=${SMTP_USERNAME:-Py Monitor}
+      - SMTP_FROM=${SMTP_FROM:-dummy@dummy.com}
       - TZ=Asia/Seoul
     ports:
       - "8000:8000"
