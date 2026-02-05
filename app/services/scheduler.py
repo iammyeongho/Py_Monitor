@@ -186,9 +186,9 @@ class MonitoringScheduler:
                 if project.url:
                     try:
                         pw_service = await self._get_playwright_service()
-                        playwright_result = await pw_service.deep_check(
+                        playwright_result = await pw_service.monitor_project(
                             project_id=project_id,
-                            url=project.url
+                            save_log=False
                         )
                     except Exception as e:
                         logger.warning(f"Playwright check failed for project {project_id}: {e}")
@@ -257,39 +257,34 @@ class MonitoringScheduler:
             error_message=http_status.error_message,
         )
 
-        # Playwright 결과가 있으면 심층 메트릭 추가
+        # Playwright 결과가 있으면 심층 메트릭 추가 (PlaywrightMetrics는 flat 구조)
         if playwright_result:
             # 성능 메트릭
-            if playwright_result.performance:
-                log.dom_content_loaded = playwright_result.performance.dom_content_loaded
-                log.page_load_time = playwright_result.performance.page_load_time
-                log.first_contentful_paint = playwright_result.performance.first_contentful_paint
-                log.largest_contentful_paint = playwright_result.performance.largest_contentful_paint
-                log.time_to_first_byte = playwright_result.performance.time_to_first_byte
-                log.cumulative_layout_shift = playwright_result.performance.cumulative_layout_shift
-                log.total_blocking_time = playwright_result.performance.total_blocking_time
+            log.dom_content_loaded = playwright_result.dom_content_loaded
+            log.page_load_time = playwright_result.page_load_time
+            log.first_contentful_paint = playwright_result.first_contentful_paint
+            log.largest_contentful_paint = playwright_result.largest_contentful_paint
+            log.time_to_first_byte = playwright_result.time_to_first_byte
+            log.cumulative_layout_shift = playwright_result.cumulative_layout_shift
+            log.total_blocking_time = playwright_result.total_blocking_time
 
             # 건강 상태
-            if playwright_result.health:
-                log.is_dom_ready = playwright_result.health.is_dom_ready
-                log.is_js_healthy = playwright_result.health.is_js_healthy
-                log.console_errors = playwright_result.health.console_errors
-                if playwright_result.health.js_errors:
-                    log.js_errors = json.dumps(playwright_result.health.js_errors)
+            log.is_dom_ready = playwright_result.is_dom_ready
+            log.is_js_healthy = playwright_result.is_js_healthy
+            log.console_errors = playwright_result.console_errors
+            if playwright_result.js_errors:
+                log.js_errors = json.dumps(playwright_result.js_errors)
 
             # 리소스 정보
-            if playwright_result.resources:
-                log.resource_count = playwright_result.resources.count
-                log.resource_size = playwright_result.resources.size
-                log.failed_resources = playwright_result.resources.failed
+            log.resource_count = playwright_result.resource_count
+            log.resource_size = playwright_result.resource_size
+            log.failed_resources = playwright_result.failed_resources
 
             # 네트워크 정보
-            if playwright_result.network:
-                log.redirect_count = playwright_result.network.redirect_count
+            log.redirect_count = playwright_result.redirect_count
 
             # 메모리 정보
-            if playwright_result.memory:
-                log.js_heap_size = playwright_result.memory.js_heap_size
+            log.js_heap_size = playwright_result.js_heap_size
 
             # Playwright 응답 시간 우선 사용
             if playwright_result.response_time:
@@ -737,9 +732,9 @@ class MonitoringScheduler:
             if project.url:
                 try:
                     pw_service = await self._get_playwright_service()
-                    playwright_result = await pw_service.deep_check(
+                    playwright_result = await pw_service.monitor_project(
                         project_id=project_id,
-                        url=project.url
+                        save_log=False
                     )
                 except Exception as e:
                     logger.warning(f"Playwright check failed: {e}")
