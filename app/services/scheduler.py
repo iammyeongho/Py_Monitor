@@ -53,6 +53,13 @@ logger = logging.getLogger(__name__)
 class MonitoringScheduler:
     """HTTP + Playwright 통합 모니터링 스케줄러"""
 
+    # 동시 HTTP 체크 최대 수 (DB 커넥션 풀, 네트워크 부하 고려)
+    MAX_CONCURRENT_HTTP = 10
+    # 동시 Playwright 체크 최대 수 (브라우저 메모리 부하 고려)
+    MAX_CONCURRENT_PLAYWRIGHT = 2
+    # 스케줄러 시작 시 프로젝트 간 시차 (초)
+    STAGGER_INTERVAL = 0.5
+
     def __init__(self, db: Session):
         self.db = db
         self.tasks: Dict[int, asyncio.Task] = {}
@@ -67,6 +74,9 @@ class MonitoringScheduler:
         self.cleanup_service = CleanupService(db)
         self.is_running = False
         self._lock = asyncio.Lock()
+        # 동시 실행 제한 세마포어
+        self._http_semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_HTTP)
+        self._playwright_semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_PLAYWRIGHT)
 
     async def _get_playwright_service(self) -> PlaywrightMonitorService:
         """Playwright 서비스 인스턴스 반환 (지연 초기화)"""
@@ -75,7 +85,12 @@ class MonitoringScheduler:
         return self.playwright_service
 
     async def start(self):
-        """스케줄러 시작"""
+        """스케줄러 시작
+
+        모든 프로젝트가 동시에 시작되면 서버 부하가 폭발하므로,
+        프로젝트별로 시차를 두어 순차적으로 태스크를 등록한다.
+        각 태스크 내부에서도 세마포어로 동시 실행 수를 제한한다.
+        """
         async with self._lock:
             if self.is_running:
                 logger.warning("Scheduler is already running")
@@ -84,18 +99,23 @@ class MonitoringScheduler:
             logger.info("Starting monitoring scheduler...")
             self.is_running = True
 
-            # 활성화된 모든 프로젝트의 모니터링 시작
+            # 활성화된 모든 프로젝트의 모니터링 시작 (시차 적용)
             projects = self.db.query(Project).filter(Project.is_active.is_(True)).all()
-            for project in projects:
-                await self.start_monitoring(project.id)
+            for i, project in enumerate(projects):
+                # 태스크 생성 시 초기 지연 시간을 전달하여 동시 시작 방지
+                initial_delay = i * self.STAGGER_INTERVAL
+                await self._start_monitoring_with_delay(project.id, initial_delay)
 
-            # SSL/도메인 만료 체크 태스크 시작 (매일 1회)
+            # SSL/도메인 만료 체크 태스크 시작 (매일 1회, 시작 후 5분 지연)
             self.ssl_check_task = asyncio.create_task(self._ssl_expiry_check_loop())
 
             # 로그 자동 정리 태스크 시작 (매일 1회, 새벽 3시)
             self.cleanup_task = asyncio.create_task(self._cleanup_loop())
 
-            logger.info(f"Monitoring scheduler started with {len(projects)} projects")
+            logger.info(
+                f"Monitoring scheduler started with {len(projects)} projects "
+                f"(stagger: {self.STAGGER_INTERVAL}s)"
+            )
 
     async def stop(self):
         """스케줄러 중지"""
@@ -128,8 +148,8 @@ class MonitoringScheduler:
             self.is_running = False
             logger.info("Monitoring scheduler stopped successfully")
 
-    async def start_monitoring(self, project_id: int):
-        """프로젝트 모니터링 시작"""
+    async def _start_monitoring_with_delay(self, project_id: int, initial_delay: float = 0):
+        """초기 지연을 적용하여 모니터링 시작 (스케줄러 시작 시 시차 분산용)"""
         if project_id in self.tasks:
             await self.stop_monitoring(project_id)
 
@@ -138,18 +158,24 @@ class MonitoringScheduler:
             logger.error(f"Project {project_id} not found")
             return
 
-        # 모니터링 설정 조회
         setting = self.db.query(MonitoringSetting).filter(
             MonitoringSetting.project_id == project_id
         ).first()
 
         interval = setting.check_interval if setting else (project.status_interval or 300)
 
-        logger.info(f"Starting monitoring for project {project_id} (interval: {interval}s)")
+        logger.info(
+            f"Starting monitoring for project {project_id} "
+            f"(interval: {interval}s, delay: {initial_delay:.1f}s)"
+        )
         self.consecutive_failures[project_id] = 0
         self.tasks[project_id] = asyncio.create_task(
-            self._monitor_project(project_id, interval)
+            self._monitor_project(project_id, interval, initial_delay=initial_delay)
         )
+
+    async def start_monitoring(self, project_id: int):
+        """프로젝트 모니터링 시작 (외부 호출용, 지연 없음)"""
+        await self._start_monitoring_with_delay(project_id, initial_delay=0)
 
     async def stop_monitoring(self, project_id: int):
         """프로젝트 모니터링 중지"""
@@ -163,8 +189,22 @@ class MonitoringScheduler:
             del self.tasks[project_id]
             self.consecutive_failures.pop(project_id, None)
 
-    async def _monitor_project(self, project_id: int, interval: int):
-        """프로젝트 모니터링 작업 (HTTP + Playwright 통합)"""
+    async def _monitor_project(self, project_id: int, interval: int, initial_delay: float = 0):
+        """프로젝트 모니터링 작업 (HTTP + Playwright 통합)
+
+        Args:
+            project_id: 프로젝트 ID
+            interval: 체크 간격 (초)
+            initial_delay: 최초 실행 전 대기 시간 (초, 시차 분산용)
+        """
+        # 스케줄러 시작 시 프로젝트별 시차를 두어 동시 폭발 방지
+        if initial_delay > 0:
+            await asyncio.sleep(initial_delay)
+
+        # Playwright 체크 빈도 카운터 (매 PLAYWRIGHT_CHECK_EVERY번째 주기에만 실행)
+        PLAYWRIGHT_CHECK_EVERY = 6  # 예: 5분 간격이면 30분마다 Playwright 체크
+        check_count = 0
+
         while True:
             try:
                 project = self.db.query(Project).filter(Project.id == project_id).first()
@@ -178,18 +218,23 @@ class MonitoringScheduler:
                 ).first()
                 alert_threshold = setting.alert_threshold if setting else 3
 
-                # 1. HTTP 기본 체크 실행
-                http_status = await self.monitoring_service.check_project_status(project_id)
+                # 1. HTTP 기본 체크 실행 (세마포어로 동시 실행 수 제한)
+                async with self._http_semaphore:
+                    http_status = await self.monitoring_service.check_project_status(project_id)
 
-                # 2. Playwright 심층 체크 실행 (URL이 있는 경우)
+                # 2. Playwright 심층 체크 (N번째 주기마다만 실행, 세마포어로 동시 수 제한)
                 playwright_result = None
-                if project.url:
+                check_count += 1
+                run_playwright = (check_count % PLAYWRIGHT_CHECK_EVERY == 1) and project.url
+
+                if run_playwright:
                     try:
-                        pw_service = await self._get_playwright_service()
-                        playwright_result = await pw_service.monitor_project(
-                            project_id=project_id,
-                            save_log=False
-                        )
+                        async with self._playwright_semaphore:
+                            pw_service = await self._get_playwright_service()
+                            playwright_result = await pw_service.monitor_project(
+                                project_id=project_id,
+                                save_log=False
+                            )
                     except Exception as e:
                         logger.warning(f"Playwright check failed for project {project_id}: {e}")
 
@@ -232,7 +277,7 @@ class MonitoringScheduler:
 
                 self.db.commit()
 
-                # 7. WebSocket으로 실시간 업데이트 전송
+                # 8. WebSocket으로 실시간 업데이트 전송
                 await self._send_websocket_update(project, log)
 
                 # 다음 모니터링까지 대기
@@ -583,6 +628,9 @@ class MonitoringScheduler:
         CHECK_INTERVAL = 24 * 60 * 60  # 24시간
         WARNING_DAYS = [30, 14, 7, 3, 1]  # 알림을 보낼 D-day
 
+        # 스케줄러 시작 직후 SSL 체크가 동시에 실행되지 않도록 5분 지연
+        await asyncio.sleep(300)
+
         while self.is_running:
             try:
                 logger.info("Starting SSL/Domain expiry check...")
@@ -597,6 +645,8 @@ class MonitoringScheduler:
 
                     await self._check_ssl_expiry(project, WARNING_DAYS)
                     await self._check_domain_expiry(project, WARNING_DAYS)
+                    # 프로젝트 간 1초 간격으로 WHOIS 서버 부하 방지
+                    await asyncio.sleep(1)
 
                 logger.info(f"SSL/Domain expiry check completed for {len(projects)} projects")
                 await asyncio.sleep(CHECK_INTERVAL)
@@ -730,18 +780,20 @@ class MonitoringScheduler:
             return None
 
         try:
-            # HTTP 체크
-            http_status = await self.monitoring_service.check_project_status(project_id)
+            # HTTP 체크 (세마포어로 동시 실행 제한)
+            async with self._http_semaphore:
+                http_status = await self.monitoring_service.check_project_status(project_id)
 
-            # Playwright 심층 체크
+            # Playwright 심층 체크 (세마포어로 동시 실행 제한)
             playwright_result = None
             if project.url:
                 try:
-                    pw_service = await self._get_playwright_service()
-                    playwright_result = await pw_service.monitor_project(
-                        project_id=project_id,
-                        save_log=False
-                    )
+                    async with self._playwright_semaphore:
+                        pw_service = await self._get_playwright_service()
+                        playwright_result = await pw_service.monitor_project(
+                            project_id=project_id,
+                            save_log=False
+                        )
                 except Exception as e:
                     logger.warning(f"Playwright check failed: {e}")
 
