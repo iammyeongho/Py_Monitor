@@ -1,6 +1,16 @@
 """
 모니터링 서비스 테스트
 
+# Laravel 개발자를 위한 설명
+# conftest.py의 fixture를 사용하여 테스트 환경을 설정합니다.
+# client, auth_headers fixture를 통해 인증된 API 호출을 수행합니다.
+#
+# 주요 테스트:
+# 1. 프로젝트 상태 확인 (단일/전체)
+# 2. 모니터링 설정 CRUD
+# 3. TCP/DNS/Content/Security 체크
+# 4. MonitoringService 단위 테스트 (Mock 기반)
+
 실제 API 라우터 경로: /api/v1/monitoring
 """
 
@@ -10,8 +20,6 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, AsyncMock
 import asyncio
-from fastapi.testclient import TestClient
-from main import app
 
 from app.core.security import get_password_hash
 from app.models.user import User
@@ -20,37 +28,17 @@ from app.models.monitoring import MonitoringLog, MonitoringAlert, MonitoringSett
 from app.schemas.monitoring import MonitoringStatus
 from app.services.monitoring import MonitoringService
 
-client = TestClient(app)
 
+# =====================
+# Fixture 정의
+# =====================
 
-def get_test_token():
-    """테스트용 토큰 획득"""
-    # 사용자 생성
-    client.post(
-        "/api/v1/auth/",
-        json={
-            "email": "monitoring_test@example.com",
-            "password": "testpassword123",
-            "full_name": "Monitoring Test User"
-        }
-    )
-
-    # 로그인
-    response = client.post(
-        "/api/v1/auth/login",
-        data={
-            "username": "monitoring_test@example.com",
-            "password": "testpassword123"
-        }
-    )
-    return response.json()["access_token"]
-
-
-def create_test_project(token: str) -> int:
-    """테스트용 프로젝트 생성"""
+@pytest.fixture
+def test_project(client, auth_headers, db):
+    """테스트용 프로젝트 생성 (API를 통해)"""
     response = client.post(
         "/api/v1/projects/",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "title": "Monitoring Test Project",
             "url": "https://example.com",
@@ -63,17 +51,38 @@ def create_test_project(token: str) -> int:
             "time_limit_interval": 15
         }
     )
-    return response.json()["id"]
+    assert response.status_code == 200
+    return response.json()
 
 
-def test_check_project_status():
+def _create_monitoring_setting(client, auth_headers, project_id):
+    """모니터링 설정 생성 헬퍼 함수"""
+    response = client.post(
+        "/api/v1/monitoring/settings",
+        headers=auth_headers,
+        json={
+            "project_id": project_id,
+            "check_interval": 300,
+            "timeout": 30,
+            "retry_count": 3,
+            "alert_threshold": 3
+        }
+    )
+    assert response.status_code == 200
+    return response.json()
+
+
+# =====================
+# 프로젝트 상태 확인 테스트
+# =====================
+
+def test_check_project_status(client, auth_headers, test_project):
     """프로젝트 상태 확인 테스트"""
-    token = get_test_token()
-    project_id = create_test_project(token)
+    project_id = test_project["id"]
 
     response = client.get(
         f"/api/v1/monitoring/status/{project_id}",
-        headers={"Authorization": f"Bearer {token}"}
+        headers=auth_headers
     )
     assert response.status_code == 200
     data = response.json()
@@ -82,27 +91,28 @@ def test_check_project_status():
     assert "checked_at" in data
 
 
-def test_get_all_projects_status():
+def test_get_all_projects_status(client, auth_headers):
     """전체 프로젝트 상태 확인 테스트"""
-    token = get_test_token()
-
     response = client.get(
         "/api/v1/monitoring/status",
-        headers={"Authorization": f"Bearer {token}"}
+        headers=auth_headers
     )
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
 
 
-def test_create_monitoring_setting():
+# =====================
+# 모니터링 설정 CRUD 테스트
+# =====================
+
+def test_create_monitoring_setting(client, auth_headers, test_project):
     """모니터링 설정 생성 테스트"""
-    token = get_test_token()
-    project_id = create_test_project(token)
+    project_id = test_project["id"]
 
     response = client.post(
         "/api/v1/monitoring/settings",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "project_id": project_id,
             "check_interval": 300,
@@ -117,54 +127,32 @@ def test_create_monitoring_setting():
     assert data["check_interval"] == 300
 
 
-def test_get_monitoring_setting():
+def test_get_monitoring_setting(client, auth_headers, test_project):
     """모니터링 설정 조회 테스트"""
-    token = get_test_token()
-    project_id = create_test_project(token)
+    project_id = test_project["id"]
 
     # 먼저 설정 생성
-    client.post(
-        "/api/v1/monitoring/settings",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "project_id": project_id,
-            "check_interval": 300,
-            "timeout": 30,
-            "retry_count": 3,
-            "alert_threshold": 3
-        }
-    )
+    _create_monitoring_setting(client, auth_headers, project_id)
 
     response = client.get(
         f"/api/v1/monitoring/settings/{project_id}",
-        headers={"Authorization": f"Bearer {token}"}
+        headers=auth_headers
     )
     assert response.status_code == 200
     data = response.json()
     assert "check_interval" in data
 
 
-def test_update_monitoring_setting():
+def test_update_monitoring_setting(client, auth_headers, test_project):
     """모니터링 설정 업데이트 테스트"""
-    token = get_test_token()
-    project_id = create_test_project(token)
+    project_id = test_project["id"]
 
     # 먼저 설정 생성
-    client.post(
-        "/api/v1/monitoring/settings",
-        headers={"Authorization": f"Bearer {token}"},
-        json={
-            "project_id": project_id,
-            "check_interval": 300,
-            "timeout": 30,
-            "retry_count": 3,
-            "alert_threshold": 3
-        }
-    )
+    _create_monitoring_setting(client, auth_headers, project_id)
 
     response = client.put(
         f"/api/v1/monitoring/settings/{project_id}",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "check_interval": 600,
             "timeout": 60
@@ -176,13 +164,15 @@ def test_update_monitoring_setting():
     assert data["timeout"] == 60
 
 
-def test_tcp_port_check():
-    """TCP 포트 체크 테스트"""
-    token = get_test_token()
+# =====================
+# TCP/DNS/Content/Security 체크 테스트
+# =====================
 
+def test_tcp_port_check(client, auth_headers):
+    """TCP 포트 체크 테스트"""
     response = client.post(
         "/api/v1/monitoring/check/tcp",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "host": "google.com",
             "port": 80,
@@ -196,13 +186,11 @@ def test_tcp_port_check():
     assert "is_open" in data
 
 
-def test_dns_lookup():
+def test_dns_lookup(client, auth_headers):
     """DNS 조회 테스트"""
-    token = get_test_token()
-
     response = client.post(
         "/api/v1/monitoring/check/dns",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "domain": "google.com",
             "record_type": "A"
@@ -215,13 +203,11 @@ def test_dns_lookup():
     assert "records" in data
 
 
-def test_content_check():
+def test_content_check(client, auth_headers):
     """콘텐츠 검증 테스트"""
-    token = get_test_token()
-
     response = client.post(
         "/api/v1/monitoring/check/content",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "url": "https://www.google.com",
             "expected_content": "Google",
@@ -234,13 +220,11 @@ def test_content_check():
     assert "is_found" in data
 
 
-def test_security_headers_check():
+def test_security_headers_check(client, auth_headers):
     """보안 헤더 체크 테스트"""
-    token = get_test_token()
-
     response = client.post(
         "/api/v1/monitoring/check/security-headers",
-        headers={"Authorization": f"Bearer {token}"},
+        headers=auth_headers,
         json={
             "url": "https://www.google.com",
             "timeout": 30
@@ -253,7 +237,10 @@ def test_security_headers_check():
     assert "score" in data
 
 
+# =====================
 # MonitoringService 단위 테스트
+# =====================
+
 @pytest.fixture
 def mock_db():
     """테스트용 DB 세션"""
