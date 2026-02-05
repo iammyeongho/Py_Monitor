@@ -99,7 +99,11 @@ def check_domain_expiry(domain: str) -> Dict:
 
         # 만약 만료일이 리스트인 경우 (여러 날짜가 있는 경우)
         if isinstance(expiry_date, list):
-            expiry_date = expiry_date[0]
+            expiry_date = expiry_date[0] if expiry_date else None
+
+        # 만료일 정보가 없는 경우
+        if expiry_date is None:
+            return {"valid": False, "error": "만료일 정보를 찾을 수 없습니다"}
 
         days_until_expiry = (expiry_date - datetime.now()).days
 
