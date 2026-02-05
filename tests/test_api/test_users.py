@@ -58,7 +58,7 @@ def test_login(client, db: Session):
         full_name="Login User"
     )
     db.add(user)
-    db.commit()
+    db.flush()
 
     response = client.post(
         "/api/v1/auth/login",
@@ -82,7 +82,7 @@ def test_login_wrong_password(client, db: Session):
         hashed_password=hashed
     )
     db.add(user)
-    db.commit()
+    db.flush()
 
     response = client.post(
         "/api/v1/auth/login",
@@ -104,7 +104,7 @@ def test_get_current_user(client, db: Session):
         full_name="Me User"
     )
     db.add(user)
-    db.commit()
+    db.flush()
 
     # 로그인하여 토큰 획득
     login_response = client.post(
@@ -136,7 +136,7 @@ def test_update_current_user(client, db: Session):
         full_name="Original Name"
     )
     db.add(user)
-    db.commit()
+    db.flush()
 
     # 로그인
     login_response = client.post(
@@ -159,8 +159,8 @@ def test_update_current_user(client, db: Session):
     assert data["full_name"] == "Updated Name"
 
 
-def test_get_users(client, db: Session):
-    """사용자 목록 조회 테스트"""
+def test_get_users(client, db: Session, superuser_headers: dict):
+    """사용자 목록 조회 테스트 (관리자 전용)"""
     # 테스트 사용자들 생성
     created_emails = []
     for i in range(3):
@@ -171,17 +171,17 @@ def test_get_users(client, db: Session):
             hashed_password=get_password_hash("password")
         )
         db.add(user)
-    db.commit()
+    db.flush()
 
-    response = client.get("/api/v1/auth/")
+    response = client.get("/api/v1/auth/", headers=superuser_headers)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     # 최소 3명 이상의 사용자가 있어야 함
     assert len(data) >= 3
 
 
-def test_get_user_by_id(client, db: Session):
-    """특정 사용자 조회 테스트"""
+def test_get_user_by_id(client, db: Session, superuser_headers: dict):
+    """특정 사용자 조회 테스트 (관리자 전용)"""
     email = unique_email("specific")
     user = User(
         email=email,
@@ -189,10 +189,10 @@ def test_get_user_by_id(client, db: Session):
         full_name="Specific User"
     )
     db.add(user)
-    db.commit()
+    db.flush()
     db.refresh(user)
 
-    response = client.get(f"/api/v1/auth/{user.id}")
+    response = client.get(f"/api/v1/auth/{user.id}", headers=superuser_headers)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["email"] == email
@@ -206,7 +206,7 @@ def test_duplicate_email(client, db: Session):
         hashed_password=get_password_hash("password")
     )
     db.add(user)
-    db.commit()
+    db.flush()
 
     response = client.post(
         "/api/v1/auth/",
