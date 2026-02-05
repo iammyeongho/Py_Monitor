@@ -12,7 +12,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # 모니터링 로그 스키마
@@ -128,6 +128,21 @@ class MonitoringSettingResponse(MonitoringSettingBase):
     last_content_check_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+    # DB에 NULL로 저장된 bool 필드를 기본값으로 변환
+    # (컬럼 추가 이전에 생성된 레코드 대응)
+    @field_validator(
+        "content_change_detection", "keyword_monitoring", "is_alert_enabled",
+        mode="before"
+    )
+    @classmethod
+    def bool_default_false(cls, v):
+        return v if v is not None else False
+
+    @field_validator("keyword_alert_on_found", mode="before")
+    @classmethod
+    def bool_default_true(cls, v):
+        return v if v is not None else True
 
     class Config:
         from_attributes = True
