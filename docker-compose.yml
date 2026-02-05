@@ -39,9 +39,9 @@ services:
       # 컨테이너 삭제해도 데이터 유지됨
       - postgres_data:/var/lib/postgresql/data
     ports:
-      # 호스트:컨테이너 포트 매핑
-      # localhost:5432로 접근 가능
-      - "5432:5432"
+      # 호스트 localhost에서만 접근 가능 (외부 네트워크 노출 방지)
+      # pgAdmin 등 로컬 도구에서 접근 시: localhost:5432
+      - "127.0.0.1:5432:5432"
     healthcheck:
       # 서비스 상태 확인 (다른 서비스가 의존할 때 사용)
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -61,7 +61,8 @@ services:
     environment:
       TZ: Asia/Seoul
     ports:
-      - "6379:6379"
+      # 호스트 localhost에서만 접근 가능
+      - "127.0.0.1:6379:6379"
     volumes:
       # Redis 데이터 영속화 (AOF/RDB 파일)
       - redis_data:/data
@@ -84,7 +85,9 @@ services:
       dockerfile: Dockerfile              # Dockerfile 파일명
     container_name: pymonitor-app
     env_file:
-      - .env                              # 환경 변수 파일 로드
+      # .env 파일이 없으면 .env.docker를 복사하세요: cp .env.docker .env
+      - path: .env
+        required: false
     environment:
       # docker-compose 내부 서비스명으로 연결
       # 'postgres'는 서비스명 = 컨테이너 호스트명

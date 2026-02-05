@@ -12,6 +12,7 @@
 # 6. 로깅 설정
 """
 
+import json
 import os
 from typing import List, Optional
 
@@ -26,8 +27,12 @@ class Settings(BaseSettings):
     # 프로젝트 설정
     PROJECT_NAME: str = "Py_Monitor"
     # CORS 허용 도메인 목록
-    # 개발 환경에서는 localhost를 허용하고, 운영 환경에서는 실제 도메인을 지정해야 합니다.
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # 환경 변수에서 쉼표 구분 문자열 또는 * 와일드카드 지원
+    # 예: BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+    # 예: BACKEND_CORS_ORIGINS=* (모든 도메인 허용)
+    # str 타입으로 정의 (pydantic-settings가 List[str]을 JSON으로 파싱 시도하기 때문)
+    # __init__에서 리스트로 변환
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000"
 
     # 데이터베이스 설정
     # PostgreSQL 데이터베이스 연결 정보
@@ -91,6 +96,17 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        # CORS 파싱: 쉼표 구분 문자열 → 리스트 변환
+        cors_raw = self.BACKEND_CORS_ORIGINS
+        if isinstance(cors_raw, str):
+            if cors_raw.strip() == "*":
+                self.BACKEND_CORS_ORIGINS = ["*"]
+            elif cors_raw.startswith("["):
+                self.BACKEND_CORS_ORIGINS = json.loads(cors_raw)
+            else:
+                self.BACKEND_CORS_ORIGINS = [
+                    o.strip() for o in cors_raw.split(",") if o.strip()
+                ]
         # PostgreSQL 연결 문자열 생성
         self.SQLALCHEMY_DATABASE_URI = (
             f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"

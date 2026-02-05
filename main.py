@@ -32,10 +32,13 @@ app = FastAPI(
 )
 
 # CORS 미들웨어 설정
+# '*' 와일드카드 사용 시 allow_credentials=False 필요 (브라우저 보안 정책)
+# 프론트엔드는 Authorization 헤더 방식이므로 credentials 불필요
+cors_allow_all = settings.BACKEND_CORS_ORIGINS == ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=not cors_allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -85,6 +85,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --chown: 복사된 파일의 소유자를 appuser로 설정
 COPY --chown=appuser:appuser . .
 
+# entrypoint.sh를 실행 가능하게 설정
+RUN chmod +x /app/entrypoint.sh
+
 # -----------------------------------------------------------------------------
 # 사용자 전환
 # -----------------------------------------------------------------------------
@@ -104,21 +107,22 @@ EXPOSE 8000
 # Docker가 컨테이너 상태를 주기적으로 확인
 # --interval: 체크 간격 (30초)
 # --timeout: 응답 대기 시간 (30초)
-# --start-period: 시작 후 대기 시간 (5초, 앱 초기화 시간)
+# --start-period: 시작 후 대기 시간 (40초, 마이그레이션 + 앱 초기화 시간)
 # --retries: 실패 허용 횟수 (3회 실패 시 unhealthy)
 # curl -f: HTTP 에러 코드 시 실패 반환
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=30s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # -----------------------------------------------------------------------------
 # 애플리케이션 실행
 # -----------------------------------------------------------------------------
-# CMD: 컨테이너 시작 시 실행할 명령어
-# uvicorn: ASGI 서버 (FastAPI용)
-#   main:app = main.py의 app 객체
-#   --host 0.0.0.0 = 모든 IP에서 접근 허용 (컨테이너 외부 접근용)
-#   --port 8000 = 포트 지정
+# ENTRYPOINT: 컨테이너 시작 시 항상 실행되는 스크립트
+# entrypoint.sh 실행 순서:
+#   1. PostgreSQL 연결 대기 (pg_isready)
+#   2. py_monitor 스키마 생성 (CREATE SCHEMA IF NOT EXISTS)
+#   3. Alembic 마이그레이션 실행 (alembic upgrade head)
+#   4. Uvicorn으로 FastAPI 앱 시작
 #
-# 프로덕션에서는 gunicorn + uvicorn worker 권장:
-# CMD ["gunicorn", "main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 프로덕션에서는 entrypoint.sh 내 uvicorn을 gunicorn으로 교체 권장:
+# exec gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+ENTRYPOINT ["/app/entrypoint.sh"]
