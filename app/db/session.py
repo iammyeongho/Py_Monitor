@@ -15,7 +15,7 @@ Laravel과의 차이점:
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
@@ -27,10 +27,6 @@ engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True)
 # autocommit=False: 명시적 commit() 필요 (Laravel의 트랜잭션과 유사)
 # autoflush=False: 명시적 flush() 필요 (성능 최적화)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Base 클래스 생성 (SQLAlchemy 2.0 스타일)
-# 모든 모델은 이 Base를 상속받아 정의
-Base = declarative_base()
 
 
 def get_db():

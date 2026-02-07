@@ -53,7 +53,7 @@ from app.schemas.monitoring import (
     TCPPortCheckResponse,
     UDPPortCheckResponse,
 )
-from app.utils.notifications import NotificationService
+from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +185,7 @@ class MonitoringService:
     def __init__(self, db: Session):
         self.db = db
         self._monitoring_tasks: Dict[int, asyncio.Task] = {}
-        self.notification_service = NotificationService()
+        self.notification_service = NotificationService(db)
 
     async def check_project_status(self, project_id: int) -> MonitoringStatus:
         """프로젝트 상태 확인"""
@@ -791,35 +791,16 @@ class MonitoringService:
         self.db.commit()
         self.db.refresh(alert)
 
-        # 알림 데이터 준비
-        alert_data = {
-            "project_name": project.title,
-            "project_url": project.url,
-            "error_message": message,
-            "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-        # 이메일 알림 전송
-        if project.user.email:
-            template = self.notification_service.get_alert_template(alert_type)
-            await self.notification_service.send_email_notification(
-                email=project.user.email,
-                subject=f"[모니터링 알림] {project.title}",
-                template=template,
-                data=alert_data,
-            )
-
-        # 웹훅 알림 전송
-        if project.webhook_url:
-            await self.notification_service.send_webhook_notification(
-                webhook_url=project.webhook_url,
-                data={
-                    "type": alert_type,
-                    "project": project.title,
-                    "message": message,
-                    "timestamp": datetime.now().isoformat(),
-                },
-            )
+        # 통합 알림 서비스를 통해 이메일/웹훅 알림 전송
+        await self.notification_service.send_alert_notification(
+            project_id=project_id,
+            alert_type=alert_type,
+            message=message,
+            details={
+                "project_name": project.title,
+                "project_url": str(project.url),
+            }
+        )
 
         return alert
 
@@ -840,20 +821,12 @@ class MonitoringService:
         self.db.commit()
         self.db.refresh(alert)
 
-        # 이메일 알림 전송
-        project = self.db.query(Project).filter(Project.id == alert.project_id).first()
-        if project and project.user.email:
-            await self.notification_service.send_email_notification(
-                email=project.user.email,
-                subject=f"모니터링 알림: {project.title}",
-                template=self.notification_service.get_alert_template(alert.alert_type),
-                data={
-                    "project_name": project.title,
-                    "project_url": project.url,
-                    "error_message": alert.message,
-                    "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                },
-            )
+        # 통합 알림 서비스를 통해 알림 전송
+        await self.notification_service.send_alert_notification(
+            project_id=alert.project_id,
+            alert_type=alert.alert_type,
+            message=alert.message,
+        )
 
         return alert
 
